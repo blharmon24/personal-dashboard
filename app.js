@@ -10,16 +10,3 @@ document.querySelectorAll('.nav-link[data-section]').forEach(link => {
     link.classList.add('active');
   });
 });
-
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tabId = btn.dataset.tab;
-    const section = btn.closest('.content-section');
-
-    section.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    section.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
-
-    btn.classList.add('active');
-    section.querySelector(`#tab-${tabId}`).classList.remove('hidden');
-  });
-});
