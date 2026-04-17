@@ -542,34 +542,42 @@
     <div class="panel-section">
       <div class="section-label">02 — Layout</div>
 
-      <div class="field-label">Note margin width</div>
+      <div class="field-label">Notes position</div>
+      <div class="toggle-group" id="positionToggle">
+        <button onclick="setPosition('side', this)">Side margin</button>
+        <button class="active" onclick="setPosition('bottom', this)">Bottom margin</button>
+      </div>
+
+      <div class="field-label" id="marginLabel">Note margin height</div>
       <div class="slider-row">
         <input type="range" id="marginSlider" min="1" max="4" step="0.25" value="3">
         <span class="slider-val" id="marginVal">3.00 in</span>
       </div>
 
-      <div class="field-label">Front page (odd) — note margin side</div>
-      <div class="toggle-group" id="sideToggle">
-        <button class="active" onclick="setSide('right', this)">Right side</button>
-        <button onclick="setSide('left', this)">Left side</button>
-      </div>
+      <div id="sideControls" style="display:none">
+        <div class="field-label">Front page (odd) — note margin side</div>
+        <div class="toggle-group" id="sideToggle">
+          <button class="active" onclick="setSide('right', this)">Right side</button>
+          <button onclick="setSide('left', this)">Left side</button>
+        </div>
 
-      <div class="field-label">Binding gutter (spine side)</div>
-      <div class="slider-row">
-        <input type="range" id="gutterSlider" min="0" max="1.5" step="0.125" value="0.5">
-        <span class="slider-val" id="gutterVal">0.50 in</span>
+        <div class="field-label">Binding gutter (spine side)</div>
+        <div class="slider-row">
+          <input type="range" id="gutterSlider" min="0" max="1.5" step="0.125" value="0.5">
+          <span class="slider-val" id="gutterVal">0.50 in</span>
+        </div>
+
+        <div class="field-label">Scale content to fill page height</div>
+        <div class="toggle-group small" id="scaleToggle">
+          <button class="active" onclick="setScaleToFill(false, this)">No — original size</button>
+          <button onclick="setScaleToFill(true, this)">Yes — fill letter height</button>
+        </div>
       </div>
 
       <div class="field-label">Page number offset</div>
       <div class="number-row">
         <input type="number" id="pageOffset" value="0" min="0" max="20" step="1">
         <span class="number-hint">Pages to skip before alternating starts.<br>Use 1 if your PDF has a cover page.</span>
-      </div>
-
-      <div class="field-label">Scale content to fill page height</div>
-      <div class="toggle-group small" id="scaleToggle">
-        <button onclick="setScaleToFill(false, this)">No — original size</button>
-        <button class="active" onclick="setScaleToFill(true, this)">Yes — fill letter height</button>
       </div>
     </div>
 
@@ -660,10 +668,11 @@
 </main>
 
 <script>
-  let pdfFile      = null;
-  let frontSide    = 'right';
-  let showLines    = true;
-  let scaleToFill  = true;
+  let pdfFile       = null;
+  let frontSide     = 'right';
+  let showLines     = true;
+  let scaleToFill   = false;
+  let notesPosition = 'bottom';
 
   const PRESETS = [
     { hex: '#c8c2b8', label: 'Warm gray' },
@@ -736,6 +745,16 @@
     updatePreview();
   }
 
+  function setPosition(val, btn) {
+    notesPosition = val;
+    document.querySelectorAll('#positionToggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('sideControls').style.display = val === 'side' ? '' : 'none';
+    document.getElementById('marginLabel').textContent = val === 'side' ? 'Note margin width' : 'Note margin height';
+    updateInfo();
+    updatePreview();
+  }
+
   function setScaleToFill(val, btn) {
     scaleToFill = val;
     document.querySelectorAll('#scaleToggle button').forEach(b => b.classList.remove('active'));
@@ -777,6 +796,41 @@
 
   function updatePreview() {
     const container = document.getElementById('spreadPreview');
+
+    if (notesPosition === 'bottom') {
+      const margin    = parseFloat(marginSlider.value);
+      const lineColor = lineColorPicker.value;
+      const spacing   = parseInt(lineSpacingSlider.value);
+      const pageW = 155;
+      const totalH = 200;
+      const noteH  = Math.round(totalH * (margin / (11 + margin)));
+      const contH  = totalH - noteH;
+      const lh     = Math.round((spacing / 36) * 18);
+      const lCount = Math.floor((noteH - 8) / lh);
+      let noteLines = '';
+      if (showLines) {
+        for (let i = 0; i < lCount; i++) {
+          noteLines += `<hr class="note-rule" style="margin-top:${lh}px; border-bottom-color:${lineColor}80;">`;
+        }
+      }
+      container.innerHTML = `
+        <div class="page-wrap">
+          <div class="page-mock" style="width:${pageW}px; height:${totalH}px; display:flex; flex-direction:column;">
+            <div style="height:${contH}px; background:#f8f7f4; display:flex; flex-direction:column; padding:10px 8px; gap:5px; overflow:hidden;">
+              <div class="mock-line head"></div>
+              <div class="mock-line med"></div>
+              <div class="mock-line"></div>
+              <div class="mock-line short"></div>
+              <div class="mock-line"></div>
+              <div class="mock-line med"></div>
+            </div>
+            <div style="height:1px; background:var(--border); flex-shrink:0;"></div>
+            <div style="height:${noteH}px; background:#fff; padding:4px 8px; overflow:hidden;">${noteLines}</div>
+          </div>
+          <div class="page-label">All pages — bottom margin</div>
+        </div>`;
+      return;
+    }
     const margin  = parseFloat(marginSlider.value);
     const gutter  = parseFloat(gutterSlider.value);
     const backSide = frontSide === 'right' ? 'left' : 'right';
@@ -878,39 +932,54 @@
           continue;
         }
 
-        const adjustedIndex = contentIdx + offset;
         contentIdx++;
-        const isFront = adjustedIndex % 2 === 0;
-        const side    = isFront ? frontSide : backSide;
         const [embeddedPage] = await outDoc.embedPages([srcPage]);
         const { width, height } = embeddedPage;
 
-        const targetH  = scaleToFill ? 792 : height;
-        const scale    = targetH / height;
-        const scaledW  = width * scale;
-        const newWidth = scaledW + marginPts;
-        const newPage  = outDoc.addPage([newWidth, targetH]);
-
-        let contentX, contentW;
-        if (side === 'left') {
-          contentX = marginPts;
-          contentW = scaledW - gutterPts;
+        if (notesPosition === 'bottom') {
+          const newPage = outDoc.addPage([width, height + marginPts]);
+          newPage.drawPage(embeddedPage, { x: 0, y: marginPts, width, height });
+          if (showLines) {
+            const startY = marginPts - lineSpacing;
+            for (let y = startY; y > 10; y -= lineSpacing) {
+              newPage.drawLine({
+                start: { x: 20, y },
+                end:   { x: width - 20, y },
+                thickness: 0.5,
+                color: PDFLib.rgb(lineRgb.r, lineRgb.g, lineRgb.b)
+              });
+            }
+          }
         } else {
-          contentX = gutterPts;
-          contentW = scaledW - gutterPts;
-        }
-        newPage.drawPage(embeddedPage, { x: contentX, y: 0, width: contentW, height: targetH });
-        if (showLines) {
-          const noteX  = side === 'left' ? 10 : contentX + contentW + 10;
-          const lineW  = marginPts - 20;
-          const startY = targetH - 30;
-          for (let y = startY; y > 20; y -= lineSpacing) {
-            newPage.drawLine({
-              start: { x: noteX, y },
-              end:   { x: noteX + lineW, y },
-              thickness: 0.5,
-              color: PDFLib.rgb(lineRgb.r, lineRgb.g, lineRgb.b)
-            });
+          const adjustedIndex = contentIdx + offset - 1;
+          const isFront = adjustedIndex % 2 === 0;
+          const side    = isFront ? frontSide : backSide;
+          const targetH  = scaleToFill ? 792 : height;
+          const scale    = targetH / height;
+          const scaledW  = width * scale;
+          const newWidth = scaledW + marginPts;
+          const newPage  = outDoc.addPage([newWidth, targetH]);
+          let contentX, contentW;
+          if (side === 'left') {
+            contentX = marginPts;
+            contentW = scaledW - gutterPts;
+          } else {
+            contentX = gutterPts;
+            contentW = scaledW - gutterPts;
+          }
+          newPage.drawPage(embeddedPage, { x: contentX, y: 0, width: contentW, height: targetH });
+          if (showLines) {
+            const noteX  = side === 'left' ? 10 : contentX + contentW + 10;
+            const lineW  = marginPts - 20;
+            const startY = targetH - 30;
+            for (let y = startY; y > 20; y -= lineSpacing) {
+              newPage.drawLine({
+                start: { x: noteX, y },
+                end:   { x: noteX + lineW, y },
+                thickness: 0.5,
+                color: PDFLib.rgb(lineRgb.r, lineRgb.g, lineRgb.b)
+              });
+            }
           }
         }
         progressFill.style.width = Math.round(((i + 1) / total) * 82 + 10) + '%';
