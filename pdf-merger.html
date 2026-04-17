@@ -284,7 +284,7 @@
 </div>
 
 <script>
-  const { PDFDocument, StandardFonts, rgb, PDFName, PDFDict } = PDFLib;
+  const { PDFDocument, rgb, PDFName, PDFDict } = PDFLib;
 
   const SESSION_NAMES = {
     1: 'Saturday Morning Session',
@@ -295,7 +295,7 @@
 
   let selectedFiles = [];
   let detectedFontName = null;
-  let detectedStandardFont = StandardFonts.TimesRoman;
+  let detectedStandardFont = 'Times-Roman';
 
   // DOM refs
   const dropZone    = document.getElementById('dropZone');
@@ -357,7 +357,7 @@
     selectedFiles = [];
     fileInput.value = '';
     detectedFontName = null;
-    detectedStandardFont = StandardFonts.TimesRoman;
+    detectedStandardFont = 'Times-Roman';
     fontNote.innerHTML = 'Font: <span>detecting from uploaded PDFs…</span>';
     render();
     setStatus('', '');
@@ -421,18 +421,18 @@
     const isSans    = n.includes('helvetica') || n.includes('arial') || n.includes('sans') || n.includes('myriad') || n.includes('gill');
     const isMono    = n.includes('courier') || n.includes('mono') || n.includes('consolas');
 
-    if (isMono)  return isBold ? StandardFonts.CourierBold : StandardFonts.Courier;
+    if (isMono)  return isBold ? 'Courier-Bold' : 'Courier';
     if (isSans) {
-      if (isBold && isItalic) return StandardFonts.HelveticaBoldOblique;
-      if (isBold)             return StandardFonts.HelveticaBold;
-      if (isItalic)           return StandardFonts.HelveticaOblique;
-      return StandardFonts.Helvetica;
+      if (isBold && isItalic) return 'Helvetica-BoldOblique';
+      if (isBold)             return 'Helvetica-Bold';
+      if (isItalic)           return 'Helvetica-Oblique';
+      return 'Helvetica';
     }
     // Serif (Times, Minion, Garamond, Palatino, etc.)
-    if (isBold && isItalic) return StandardFonts.TimesBoldItalic;
-    if (isBold)             return StandardFonts.TimesBold;
-    if (isItalic)           return StandardFonts.TimesItalic;
-    return StandardFonts.TimesRoman;
+    if (isBold && isItalic) return 'Times-Bold'Italic;
+    if (isBold)             return 'Times-Bold';
+    if (isItalic)           return 'Times-Italic';
+    return 'Times-Roman';
   }
 
   function render() {
@@ -546,9 +546,9 @@
       // Embed fonts for divider pages
       const bodyFont = await merged.embedFont(detectedStandardFont);
       // Pick matching bold variant
-      const boldVariant = detectedStandardFont.includes('Helvetica') ? StandardFonts.HelveticaBold
-                        : detectedStandardFont.includes('Courier')   ? StandardFonts.CourierBold
-                        : StandardFonts.TimesBold;
+      const boldVariant = detectedStandardFont.includes('Helvetica') ? 'Helvetica-Bold'
+                        : detectedStandardFont.includes('Courier')   ? 'Courier-Bold'
+                        : 'Times-Bold';
       const boldFont = await merged.embedFont(boldVariant);
 
       // Determine page size from first file
