@@ -565,6 +565,12 @@
         <input type="number" id="pageOffset" value="0" min="0" max="20" step="1">
         <span class="number-hint">Pages to skip before alternating starts.<br>Use 1 if your PDF has a cover page.</span>
       </div>
+
+      <div class="field-label">Scale content to fill page height</div>
+      <div class="toggle-group small" id="scaleToggle">
+        <button onclick="setScaleToFill(false, this)">No — original size</button>
+        <button class="active" onclick="setScaleToFill(true, this)">Yes — fill letter height</button>
+      </div>
     </div>
 
     <div class="panel-section">
@@ -654,9 +660,10 @@
 </main>
 
 <script>
-  let pdfFile   = null;
-  let frontSide = 'right';
-  let showLines = true;
+  let pdfFile      = null;
+  let frontSide    = 'right';
+  let showLines    = true;
+  let scaleToFill  = true;
 
   const PRESETS = [
     { hex: '#c8c2b8', label: 'Warm gray' },
@@ -727,6 +734,13 @@
     document.querySelectorAll('#sideToggle button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     updatePreview();
+  }
+
+  function setScaleToFill(val, btn) {
+    scaleToFill = val;
+    document.querySelectorAll('#scaleToggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateInfo();
   }
 
   function setLines(val, btn) {
@@ -870,21 +884,26 @@
         const side    = isFront ? frontSide : backSide;
         const [embeddedPage] = await outDoc.embedPages([srcPage]);
         const { width, height } = embeddedPage;
-        const newWidth = width + marginPts;
-        const newPage  = outDoc.addPage([newWidth, height]);
+
+        const targetH  = scaleToFill ? 792 : height;
+        const scale    = targetH / height;
+        const scaledW  = width * scale;
+        const newWidth = scaledW + marginPts;
+        const newPage  = outDoc.addPage([newWidth, targetH]);
+
         let contentX, contentW;
         if (side === 'left') {
           contentX = marginPts;
-          contentW = width - gutterPts;
+          contentW = scaledW - gutterPts;
         } else {
           contentX = gutterPts;
-          contentW = width - gutterPts;
+          contentW = scaledW - gutterPts;
         }
-        newPage.drawPage(embeddedPage, { x: contentX, y: 0, width: contentW, height });
+        newPage.drawPage(embeddedPage, { x: contentX, y: 0, width: contentW, height: targetH });
         if (showLines) {
           const noteX  = side === 'left' ? 10 : contentX + contentW + 10;
           const lineW  = marginPts - 20;
-          const startY = height - 30;
+          const startY = targetH - 30;
           for (let y = startY; y > 20; y -= lineSpacing) {
             newPage.drawLine({
               start: { x: noteX, y },
