@@ -25,23 +25,37 @@
           IT Dashboard
         </a>
       </li>
-      <li class="nav-section-label">Misc Projects</li>
+      <li class="nav-section-label">Tools</li>
       <li>
-        <a href="general-conference-formatting.html">
-          <span class="nav-icon">📝</span>
-          General Conference Formatting
+        <a href="#" class="nav-link" data-section="misc-projects">
+          <span class="nav-icon">🗂️</span>
+          Misc Projects
         </a>
       </li>
     </ul>
   </nav>
 
   <main class="content">
-    <header class="content-header">
-      <h2>Welcome</h2>
-    </header>
-    <div class="welcome-card">
-      <p>Select a project from the menu to open it.</p>
-    </div>
+    <section id="welcome" class="content-section">
+      <header class="content-header">
+        <h2>Welcome</h2>
+      </header>
+      <div class="welcome-card">
+        <p>Select a project from the menu to open it.</p>
+      </div>
+    </section>
+
+    <section id="misc-projects" class="content-section hidden">
+      <header class="content-header">
+        <h2>Misc Projects</h2>
+      </header>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="general-conference">General Conference Formatting</button>
+      </div>
+      <div class="tab-pane" id="tab-general-conference">
+        <iframe src="general-conference-formatting.html" title="General Conference Formatting"></iframe>
+      </div>
+    </section>
   </main>
 
   <script src="app.js"></script>
