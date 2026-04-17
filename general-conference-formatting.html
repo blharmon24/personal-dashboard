@@ -847,11 +847,28 @@
       const lineHex    = lineColorPicker.value;
       const lineRgb    = hexToRgb01(lineHex);
       const backSide   = frontSide === 'right' ? 'left' : 'right';
+      let contentIdx = 0;
       for (let i = 0; i < total; i++) {
-        const adjustedIndex = i + offset;
+        const srcPage   = srcDoc.getPage(i);
+        const isDivider = srcPage.node.get(PDFLib.PDFName.of('GCDividerPage'));
+
+        if (isDivider) {
+          // Copy session divider pages as-is — no margin, no ruled lines
+          const [embeddedPage] = await outDoc.embedPages([srcPage]);
+          const { width, height } = embeddedPage;
+          const newPage = outDoc.addPage([width, height]);
+          newPage.drawPage(embeddedPage, { x: 0, y: 0, width, height });
+          progressFill.style.width = Math.round(((i + 1) / total) * 82 + 10) + '%';
+          setStatus('Copying divider page ' + (i + 1) + ' of ' + total + '...', '');
+          if (i % 15 === 0) await new Promise(r => setTimeout(r, 0));
+          continue;
+        }
+
+        const adjustedIndex = contentIdx + offset;
+        contentIdx++;
         const isFront = adjustedIndex % 2 === 0;
         const side    = isFront ? frontSide : backSide;
-        const [embeddedPage] = await outDoc.embedPages([srcDoc.getPage(i)]);
+        const [embeddedPage] = await outDoc.embedPages([srcPage]);
         const { width, height } = embeddedPage;
         const newWidth = width + marginPts;
         const newPage  = outDoc.addPage([newWidth, height]);

@@ -496,6 +496,8 @@
   async function buildDividerPage(mergedDoc, sourcePageSize, month, year, segment, bodyFont, boldFont) {
     const { width, height } = sourcePageSize;
     const page = mergedDoc.addPage([width, height]);
+    // Marker so the GC Formatting tool knows to skip margin processing on this page
+    page.node.set(PDFName.of('GCDividerPage'), mergedDoc.context.obj(true));
 
     // White background
     page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
