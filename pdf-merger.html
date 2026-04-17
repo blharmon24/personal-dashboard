@@ -18,6 +18,7 @@
       --hover: #252840;
       --success: #34d399;
       --error: #f87171;
+      --divider-color: #7c6fcd;
     }
 
     body {
@@ -28,23 +29,13 @@
       padding: 40px 24px;
     }
 
-    .container {
-      max-width: 680px;
-      margin: 0 auto;
-    }
+    .container { max-width: 720px; margin: 0 auto; }
 
-    h1 {
-      font-size: 1.6rem;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
+    h1 { font-size: 1.6rem; font-weight: 600; margin-bottom: 8px; }
 
-    .subtitle {
-      color: var(--muted);
-      font-size: 0.9rem;
-      margin-bottom: 32px;
-    }
+    .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 32px; }
 
+    /* Drop zone */
     .drop-zone {
       border: 2px dashed var(--border);
       border-radius: 12px;
@@ -54,27 +45,90 @@
       transition: border-color 0.15s, background 0.15s;
       margin-bottom: 24px;
     }
-
-    .drop-zone:hover,
-    .drop-zone.drag-over {
+    .drop-zone:hover, .drop-zone.drag-over {
       border-color: var(--accent);
       background: var(--hover);
     }
+    .drop-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .drop-zone p { color: var(--muted); font-size: 0.95rem; }
+    .drop-zone strong { color: var(--accent); }
 
-    .drop-icon {
-      font-size: 2.5rem;
-      margin-bottom: 12px;
+    /* Session settings panel */
+    .settings-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
     }
-
-    .drop-zone p {
+    .settings-panel h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
       color: var(--muted);
-      font-size: 0.95rem;
+      margin-bottom: 16px;
     }
-
-    .drop-zone strong {
-      color: var(--accent);
+    .settings-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: flex-end;
     }
+    .settings-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .settings-field label {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    select {
+      background: var(--hover);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      cursor: pointer;
+      appearance: auto;
+    }
+    select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+    .font-note {
+      margin-top: 14px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .font-note span { color: var(--accent); }
+
+    /* Session preview list */
+    .sessions-preview {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .session-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.82rem;
+    }
+    .session-badge {
+      background: var(--hover);
+      border: 1px solid var(--divider-color);
+      border-radius: 4px;
+      color: var(--divider-color);
+      font-size: 0.72rem;
+      padding: 2px 7px;
+      white-space: nowrap;
+    }
+    .session-label { color: var(--muted); }
+
+    /* File list */
     .file-list-box {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -82,7 +136,6 @@
       overflow: hidden;
       margin-bottom: 24px;
     }
-
     .file-list-header {
       display: flex;
       justify-content: space-between;
@@ -92,7 +145,6 @@
       font-size: 0.85rem;
       color: var(--muted);
     }
-
     .clear-btn {
       background: none;
       border: 1px solid var(--border);
@@ -104,42 +156,22 @@
       padding: 4px 10px;
       transition: border-color 0.15s, color 0.15s;
     }
+    .clear-btn:hover { border-color: var(--error); color: var(--error); }
 
-    .clear-btn:hover {
-      border-color: var(--error);
-      color: var(--error);
-    }
-
-    .file-items {
-      list-style: none;
-      max-height: 320px;
-      overflow-y: auto;
-    }
+    .file-items { list-style: none; max-height: 400px; overflow-y: auto; }
 
     .file-items li {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px 18px;
+      padding: 9px 18px;
       font-size: 0.88rem;
       border-bottom: 1px solid var(--border);
     }
+    .file-items li:last-child { border-bottom: none; }
 
-    .file-items li:last-child {
-      border-bottom: none;
-    }
-
-    .file-num {
-      color: var(--muted);
-      font-size: 0.75rem;
-      min-width: 24px;
-      text-align: right;
-    }
-
-    .file-name {
-      flex: 1;
-      word-break: break-all;
-    }
+    .file-num { color: var(--muted); font-size: 0.75rem; min-width: 24px; text-align: right; }
+    .file-name { flex: 1; word-break: break-all; }
 
     .file-tag {
       background: var(--hover);
@@ -150,17 +182,18 @@
       padding: 2px 6px;
       white-space: nowrap;
     }
+    .file-tag.sorted { border-color: var(--accent); color: var(--accent); }
 
-    .file-tag.sorted {
-      border-color: var(--accent);
-      color: var(--accent);
+    /* Divider row in file list */
+    .divider-row {
+      background: #1e1a2e !important;
+      border-left: 3px solid var(--divider-color) !important;
     }
+    .divider-icon { font-size: 1rem; flex-shrink: 0; }
+    .divider-text { flex: 1; color: var(--divider-color); font-size: 0.82rem; font-style: italic; }
 
-    .actions {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
+    /* Actions */
+    .actions { display: flex; gap: 12px; align-items: center; }
 
     .merge-btn {
       background: var(--accent);
@@ -174,21 +207,10 @@
       padding: 12px 28px;
       transition: opacity 0.15s;
     }
+    .merge-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .merge-btn:not(:disabled):hover { opacity: 0.85; }
 
-    .merge-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    .merge-btn:not(:disabled):hover {
-      opacity: 0.85;
-    }
-
-    .status {
-      font-size: 0.9rem;
-      padding: 4px 0;
-    }
-
+    .status { font-size: 0.9rem; padding: 4px 0; }
     .status.success { color: var(--success); }
     .status.error   { color: var(--error); }
     .status.working { color: var(--muted); }
@@ -201,9 +223,7 @@
       overflow: hidden;
       display: none;
     }
-
     .progress-bar.visible { display: block; }
-
     .progress-fill {
       height: 100%;
       background: var(--accent);
@@ -214,159 +234,373 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>PDF Merger</h1>
-    <p class="subtitle">Drop your PDFs — they'll be sorted automatically by filename (1-1, 1-2, 2-1, 2-2 …) and merged into one file.</p>
+<div class="container">
+  <h1>PDF Merger</h1>
+  <p class="subtitle">Drop your PDFs — sorted by filename (1-1, 1-2, 2-1 …) with session divider pages inserted automatically.</p>
 
-    <div class="drop-zone" id="dropZone">
-      <div class="drop-icon">📄</div>
-      <p><strong>Click to select</strong> or drag &amp; drop PDF files here</p>
-      <p style="margin-top:6px;font-size:0.8rem;">Multiple files supported &mdash; any order</p>
-      <input type="file" id="fileInput" multiple accept=".pdf" style="display:none">
-    </div>
-
-    <div id="fileListBox" class="file-list-box" style="display:none">
-      <div class="file-list-header">
-        <span id="fileCount"></span>
-        <button class="clear-btn" id="clearBtn">Clear all</button>
-      </div>
-      <ol class="file-items" id="fileItems"></ol>
-    </div>
-
-    <div class="actions">
-      <button class="merge-btn" id="mergeBtn" disabled>Merge &amp; Download</button>
-      <span class="status" id="status"></span>
-    </div>
-
-    <div class="progress-bar" id="progressBar">
-      <div class="progress-fill" id="progressFill"></div>
-    </div>
+  <div class="drop-zone" id="dropZone">
+    <div class="drop-icon">📄</div>
+    <p><strong>Click to select</strong> or drag &amp; drop PDF files here</p>
+    <p style="margin-top:6px;font-size:0.8rem;">Multiple files supported — any order</p>
+    <input type="file" id="fileInput" multiple accept=".pdf" style="display:none">
   </div>
 
-  <script>
-    const { PDFDocument } = PDFLib;
-    let selectedFiles = [];
+  <!-- Session header settings -->
+  <div class="settings-panel">
+    <h3>Session Divider Pages</h3>
+    <div class="settings-row">
+      <div class="settings-field">
+        <label for="monthSelect">Month</label>
+        <select id="monthSelect">
+          <option value="April">April</option>
+          <option value="October">October</option>
+        </select>
+      </div>
+      <div class="settings-field">
+        <label for="yearSelect">Year</label>
+        <select id="yearSelect" id="yearSelect"></select>
+      </div>
+    </div>
+    <div class="font-note" id="fontNote">Font: <span>detecting from uploaded PDFs…</span></div>
+    <div class="sessions-preview" id="sessionsPreview"></div>
+  </div>
 
-    const dropZone   = document.getElementById('dropZone');
-    const fileInput  = document.getElementById('fileInput');
-    const fileListBox = document.getElementById('fileListBox');
-    const fileItems  = document.getElementById('fileItems');
-    const fileCount  = document.getElementById('fileCount');
-    const mergeBtn   = document.getElementById('mergeBtn');
-    const clearBtn   = document.getElementById('clearBtn');
-    const statusEl   = document.getElementById('status');
-    const progressBar  = document.getElementById('progressBar');
-    const progressFill = document.getElementById('progressFill');
+  <div id="fileListBox" class="file-list-box" style="display:none">
+    <div class="file-list-header">
+      <span id="fileCount"></span>
+      <button class="clear-btn" id="clearBtn">Clear all</button>
+    </div>
+    <ol class="file-items" id="fileItems"></ol>
+  </div>
 
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', e => addFiles(Array.from(e.target.files)));
+  <div class="actions">
+    <button class="merge-btn" id="mergeBtn" disabled>Merge &amp; Download</button>
+    <span class="status" id="status"></span>
+  </div>
 
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
-      addFiles(Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf')));
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+</div>
+
+<script>
+  const { PDFDocument, StandardFonts, rgb, PDFName, PDFDict } = PDFLib;
+
+  const SESSION_NAMES = {
+    1: 'Saturday Morning Session',
+    2: 'Saturday Afternoon Session',
+    3: 'Sunday Morning Session',
+    4: 'Sunday Afternoon Session',
+  };
+
+  let selectedFiles = [];
+  let detectedFontName = null;
+  let detectedStandardFont = StandardFonts.TimesRoman;
+
+  // DOM refs
+  const dropZone    = document.getElementById('dropZone');
+  const fileInput   = document.getElementById('fileInput');
+  const fileListBox = document.getElementById('fileListBox');
+  const fileItems   = document.getElementById('fileItems');
+  const fileCount   = document.getElementById('fileCount');
+  const mergeBtn    = document.getElementById('mergeBtn');
+  const clearBtn    = document.getElementById('clearBtn');
+  const statusEl    = document.getElementById('status');
+  const progressBar  = document.getElementById('progressBar');
+  const progressFill = document.getElementById('progressFill');
+  const monthSelect  = document.getElementById('monthSelect');
+  const yearSelect   = document.getElementById('yearSelect');
+  const fontNote     = document.getElementById('fontNote');
+  const sessionsPreview = document.getElementById('sessionsPreview');
+
+  // Populate year dropdown
+  const currentYear = new Date().getFullYear();
+  for (let y = currentYear - 3; y <= currentYear + 3; y++) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === currentYear) opt.selected = true;
+    yearSelect.appendChild(opt);
+  }
+
+  // Refresh preview when month/year changes
+  monthSelect.addEventListener('change', render);
+  yearSelect.addEventListener('change', render);
+
+  // Render session preview in settings panel
+  function renderSessionsPreview() {
+    const month = monthSelect.value;
+    const year  = yearSelect.value;
+    sessionsPreview.innerHTML = Object.entries(SESSION_NAMES).map(([seg, name]) =>
+      `<div class="session-row">
+        <span class="session-badge">Before ${seg}-1</span>
+        <span class="session-label">${month} ${year} General Conference &mdash; ${name}</span>
+      </div>`
+    ).join('');
+  }
+  renderSessionsPreview();
+  monthSelect.addEventListener('change', renderSessionsPreview);
+  yearSelect.addEventListener('change', renderSessionsPreview);
+
+  // Drop zone
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => addFiles(Array.from(e.target.files)));
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    addFiles(Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf')));
+  });
+
+  clearBtn.addEventListener('click', () => {
+    selectedFiles = [];
+    fileInput.value = '';
+    detectedFontName = null;
+    detectedStandardFont = StandardFonts.TimesRoman;
+    fontNote.innerHTML = 'Font: <span>detecting from uploaded PDFs…</span>';
+    render();
+    setStatus('', '');
+  });
+
+  function parseOrder(name) {
+    const m = name.match(/(\d+)-(\d+)/);
+    return m ? [parseInt(m[1]), parseInt(m[2])] : null;
+  }
+
+  async function addFiles(incoming) {
+    const existing = new Set(selectedFiles.map(f => f.name));
+    incoming.forEach(f => { if (!existing.has(f.name)) selectedFiles.push(f); });
+    selectedFiles.sort((a, b) => {
+      const oa = parseOrder(a.name);
+      const ob = parseOrder(b.name);
+      if (!oa && !ob) return a.name.localeCompare(b.name);
+      if (!oa) return 1;
+      if (!ob) return -1;
+      return oa[0] !== ob[0] ? oa[0] - ob[0] : oa[1] - ob[1];
     });
-
-    clearBtn.addEventListener('click', () => {
-      selectedFiles = [];
-      fileInput.value = '';
-      render();
-      setStatus('', '');
-    });
-
-    function parseOrder(name) {
-      const m = name.match(/(\d+)-(\d+)/);
-      return m ? [parseInt(m[1]), parseInt(m[2])] : null;
+    if (selectedFiles.length > 0 && !detectedFontName) {
+      await detectFontFromFirstFile();
     }
+    render();
+  }
 
-    function addFiles(incoming) {
-      const existing = new Set(selectedFiles.map(f => f.name));
-      incoming.forEach(f => { if (!existing.has(f.name)) selectedFiles.push(f); });
-      selectedFiles.sort((a, b) => {
-        const oa = parseOrder(a.name);
-        const ob = parseOrder(b.name);
-        if (!oa && !ob) return a.name.localeCompare(b.name);
-        if (!oa) return 1;
-        if (!ob) return -1;
-        return oa[0] !== ob[0] ? oa[0] - ob[0] : oa[1] - ob[1];
-      });
-      render();
+  async function detectFontFromFirstFile() {
+    try {
+      const bytes = await selectedFiles[0].arrayBuffer();
+      const pdf = await PDFDocument.load(bytes);
+      const page = pdf.getPage(0);
+      const resources = page.node.Resources();
+      if (!resources) return;
+      const fontRes = resources.lookup(PDFName.of('Font'));
+      if (!fontRes) return;
+      const fontDict = (typeof fontRes.keys === 'function') ? fontRes : pdf.context.lookup(fontRes, PDFDict);
+      if (!fontDict) return;
+      const keys = fontDict.keys();
+      if (!keys.length) return;
+      const firstRef = fontDict.get(keys[0]);
+      const fontObj = pdf.context.lookup(firstRef);
+      if (!fontObj) return;
+      const baseFontPDF = fontObj.get(PDFName.of('BaseFont'));
+      if (!baseFontPDF) return;
+      const rawName = baseFontPDF.toString().replace(/^\//, '').replace(/^[A-Z]{6}\+/, '');
+      detectedFontName = rawName;
+      detectedStandardFont = mapToStandardFont(rawName);
+      const mapped = detectedStandardFont.replace(/-/g, ' ');
+      fontNote.innerHTML = `Font detected: <span>${rawName}</span> &rarr; using <span>${mapped}</span>`;
+    } catch {
+      detectedFontName = 'unknown';
+      fontNote.innerHTML = `Font: <span>could not detect — using Times Roman</span>`;
     }
+  }
 
-    function render() {
-      if (selectedFiles.length === 0) {
-        fileListBox.style.display = 'none';
-        mergeBtn.disabled = true;
-        return;
-      }
-      fileListBox.style.display = '';
-      fileCount.textContent = `${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''} — merge order:`;
-      fileItems.innerHTML = selectedFiles.map((f, i) => {
-        const order = parseOrder(f.name);
-        const tag = order
-          ? `<span class="file-tag sorted">${order[0]}-${order[1]}</span>`
-          : `<span class="file-tag">unsorted</span>`;
-        return `<li>
-          <span class="file-num">${i + 1}.</span>
-          <span class="file-name">${f.name}</span>
-          ${tag}
-        </li>`;
-      }).join('');
-      mergeBtn.disabled = selectedFiles.length < 2;
+  function mapToStandardFont(name) {
+    const n = name.toLowerCase();
+    const isBold    = n.includes('bold') || n.includes('-bd') || n.includes('demi');
+    const isItalic  = n.includes('italic') || n.includes('oblique') || n.includes('-it');
+    const isSans    = n.includes('helvetica') || n.includes('arial') || n.includes('sans') || n.includes('myriad') || n.includes('gill');
+    const isMono    = n.includes('courier') || n.includes('mono') || n.includes('consolas');
+
+    if (isMono)  return isBold ? StandardFonts.CourierBold : StandardFonts.Courier;
+    if (isSans) {
+      if (isBold && isItalic) return StandardFonts.HelveticaBoldOblique;
+      if (isBold)             return StandardFonts.HelveticaBold;
+      if (isItalic)           return StandardFonts.HelveticaOblique;
+      return StandardFonts.Helvetica;
     }
+    // Serif (Times, Minion, Garamond, Palatino, etc.)
+    if (isBold && isItalic) return StandardFonts.TimesBoldItalic;
+    if (isBold)             return StandardFonts.TimesBold;
+    if (isItalic)           return StandardFonts.TimesItalic;
+    return StandardFonts.TimesRoman;
+  }
 
-    function setStatus(msg, type) {
-      statusEl.textContent = msg;
-      statusEl.className = `status ${type}`;
-    }
-
-    function setProgress(pct) {
-      if (pct === null) {
-        progressBar.classList.remove('visible');
-        progressFill.style.width = '0%';
-      } else {
-        progressBar.classList.add('visible');
-        progressFill.style.width = pct + '%';
-      }
-    }
-
-    mergeBtn.addEventListener('click', async () => {
+  function render() {
+    if (selectedFiles.length === 0) {
+      fileListBox.style.display = 'none';
       mergeBtn.disabled = true;
-      setStatus('Merging…', 'working');
-      setProgress(0);
+      return;
+    }
 
+    const month = monthSelect.value;
+    const year  = yearSelect.value;
+
+    fileListBox.style.display = '';
+    fileCount.textContent = `${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''} — merge order:`;
+
+    let html = '';
+    let fileIdx = 0;
+    let lastSeg = null;
+
+    for (const f of selectedFiles) {
+      const order = parseOrder(f.name);
+      const seg = order ? order[0] : null;
+
+      if (seg !== null && seg !== lastSeg && SESSION_NAMES[seg]) {
+        html += `<li class="divider-row">
+          <span class="divider-icon">📋</span>
+          <span class="divider-text">${month} ${year} General Conference &mdash; ${SESSION_NAMES[seg]}</span>
+        </li>`;
+        lastSeg = seg;
+      }
+
+      const tag = order
+        ? `<span class="file-tag sorted">${order[0]}-${order[1]}</span>`
+        : `<span class="file-tag">unsorted</span>`;
+      html += `<li>
+        <span class="file-num">${++fileIdx}.</span>
+        <span class="file-name">${f.name}</span>
+        ${tag}
+      </li>`;
+    }
+
+    fileItems.innerHTML = html;
+    mergeBtn.disabled = selectedFiles.length < 2;
+  }
+
+  function setStatus(msg, type) {
+    statusEl.textContent = msg;
+    statusEl.className = `status ${type}`;
+  }
+
+  function setProgress(pct) {
+    if (pct === null) {
+      progressBar.classList.remove('visible');
+      progressFill.style.width = '0%';
+    } else {
+      progressBar.classList.add('visible');
+      progressFill.style.width = pct + '%';
+    }
+  }
+
+  async function buildDividerPage(mergedDoc, sourcePageSize, month, year, segment, bodyFont, boldFont) {
+    const { width, height } = sourcePageSize;
+    const page = mergedDoc.addPage([width, height]);
+
+    // White background
+    page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
+
+    const titleText   = `${month} ${year} General Conference`;
+    const sessionText = SESSION_NAMES[segment] || '';
+
+    const titleSize   = Math.round(height * 0.032);  // ~24pt on letter
+    const sessionSize = Math.round(height * 0.024);  // ~18pt on letter
+    const gap = Math.round(height * 0.018);
+
+    const totalBlock = titleSize + gap + sessionSize;
+    const blockTop   = height / 2 + totalBlock / 2;
+
+    const titleWidth   = boldFont.widthOfTextAtSize(titleText, titleSize);
+    const sessionWidth = bodyFont.widthOfTextAtSize(sessionText, sessionSize);
+
+    page.drawText(titleText, {
+      x: (width - titleWidth) / 2,
+      y: blockTop - titleSize,
+      size: titleSize,
+      font: boldFont,
+      color: rgb(0, 0, 0),
+    });
+
+    page.drawText(sessionText, {
+      x: (width - sessionWidth) / 2,
+      y: blockTop - titleSize - gap - sessionSize,
+      size: sessionSize,
+      font: bodyFont,
+      color: rgb(0, 0, 0),
+    });
+  }
+
+  mergeBtn.addEventListener('click', async () => {
+    mergeBtn.disabled = true;
+    setStatus('Merging…', 'working');
+    setProgress(0);
+
+    const month = monthSelect.value;
+    const year  = yearSelect.value;
+
+    try {
+      const merged = await PDFDocument.create();
+
+      // Embed fonts for divider pages
+      const bodyFont = await merged.embedFont(detectedStandardFont);
+      // Pick matching bold variant
+      const boldVariant = detectedStandardFont.includes('Helvetica') ? StandardFonts.HelveticaBold
+                        : detectedStandardFont.includes('Courier')   ? StandardFonts.CourierBold
+                        : StandardFonts.TimesBold;
+      const boldFont = await merged.embedFont(boldVariant);
+
+      // Determine page size from first file
+      let sourcePageSize = { width: 612, height: 792 }; // default letter
       try {
-        const merged = await PDFDocument.create();
+        const firstBytes = await selectedFiles[0].arrayBuffer();
+        const firstPdf   = await PDFDocument.load(firstBytes);
+        sourcePageSize   = firstPdf.getPage(0).getSize();
+      } catch {}
 
-        for (let i = 0; i < selectedFiles.length; i++) {
-          const bytes = await selectedFiles[i].arrayBuffer();
-          const pdf = await PDFDocument.load(bytes);
-          const pages = await merged.copyPages(pdf, pdf.getPageIndices());
-          pages.forEach(p => merged.addPage(p));
-          setProgress(Math.round(((i + 1) / selectedFiles.length) * 90));
+      let lastSeg = null;
+      const total = selectedFiles.length;
+
+      for (let i = 0; i < total; i++) {
+        const f = selectedFiles[i];
+        const order = parseOrder(f.name);
+        const seg = order ? order[0] : null;
+
+        // Insert divider page on segment change
+        if (seg !== null && seg !== lastSeg && SESSION_NAMES[seg]) {
+          await buildDividerPage(merged, sourcePageSize, month, year, seg, bodyFont, boldFont);
+          lastSeg = seg;
         }
 
-        const mergedBytes = await merged.save();
-        setProgress(100);
+        const bytes = await f.arrayBuffer();
+        const pdf   = await PDFDocument.load(bytes);
+        const pages = await merged.copyPages(pdf, pdf.getPageIndices());
+        pages.forEach(p => merged.addPage(p));
 
-        const blob = new Blob([mergedBytes], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'merged.pdf';
-        a.click();
-        URL.revokeObjectURL(url);
-
-        setStatus(`Done! ${selectedFiles.length} files merged.`, 'success');
-      } catch (err) {
-        setStatus(`Error: ${err.message}`, 'error');
+        setProgress(Math.round(((i + 1) / total) * 90));
       }
 
-      setProgress(null);
-      mergeBtn.disabled = false;
-    });
-  </script>
+      const mergedBytes = await merged.save();
+      setProgress(100);
+
+      const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `general-conference-${month.toLowerCase()}-${year}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      const dividerCount = [...new Set(
+        selectedFiles.map(f => parseOrder(f.name)?.[0]).filter(s => s && SESSION_NAMES[s])
+      )].length;
+      setStatus(`Done! ${total} files + ${dividerCount} divider page${dividerCount !== 1 ? 's' : ''} merged.`, 'success');
+    } catch (err) {
+      setStatus(`Error: ${err.message}`, 'error');
+    }
+
+    setProgress(null);
+    mergeBtn.disabled = false;
+  });
+</script>
 </body>
 </html>
