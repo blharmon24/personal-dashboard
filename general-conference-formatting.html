@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Note Margin Tool</title>
+
+  <!--
+  ═══════════════════════════════════════════════════════════════
+  OFFLINE SETUP — one-time step to make this file work offline:
+
+  1. Open this URL in your browser while you have internet:
+     https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js
+
+  2. Select all (Ctrl+A / Cmd+A), copy everything.
+
+  3. In this HTML file, replace the line below that says:
+       <script src="https://cdnjs.cloudflare..."></script>
+     with:
+       <script>
+         [paste the copied code here]
+       </script>
+
+  4. Save. The file will now work with no internet connection.
+  ═══════════════════════════════════════════════════════════════
+  -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f3ee;
+      --surface: #ffffff;
+      --surface2: #edeae3;
+      --border: #d4cfc6;
+      --border-strong: #b8b2a7;
+      --text: #1a1916;
+      --text-muted: #6b6560;
+      --text-faint: #9c968f;
+      --accent: #2d4a3e;
+      --accent-light: #e8f0ed;
+      --accent-mid: #4a7c68;
+      --danger: #8b2e2e;
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      background: var(--surface);
+    }
+
+    header h1 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    header span {
+      font-size: 12px;
+      color: var(--text-faint);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      gap: 2rem;
+      max-width: 1140px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 2rem;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .panel-section {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-section:last-child { border-bottom: none; }
+
+    .section-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 1rem;
+    }
+
+    .drop-zone {
+      border: 1.5px dashed var(--border-strong);
+      border-radius: 3px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: var(--bg);
+    }
+
+    .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: var(--accent-light); }
+    .drop-zone.has-file { border-style: solid; border-color: var(--accent); background: var(--accent-light); }
+
+    .drop-icon { width: 36px; height: 36px; margin: 0 auto 10px; color: var(--text-muted); }
+    .drop-zone.has-file .drop-icon { color: var(--accent); }
+
+    .drop-zone p.primary { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+    .drop-zone p.secondary { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+
+    .file-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      margin-top: 8px;
+      word-break: break-all;
+    }
+
+    button.browse-btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      padding: 6px 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 2px;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    button.browse-btn:hover { background: var(--surface2); border-color: var(--accent); }
+
+    .field-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.25rem;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--surface);
+      box-shadow: 0 0 0 1px var(--accent);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--surface);
+      cursor: pointer;
+    }
+
+    .slider-val {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      min-width: 48px;
+      text-align: right;
+    }
+
+    .toggle-group {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 1.25rem;
+    }
+
+    .toggle-group button {
+      flex: 1;
+      padding: 7px 0;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      border: none;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .toggle-group button:last-child { border-right: none; }
+    .toggle-group button:hover { background: var(--surface2); color: var(--text); }
+    .toggle-group button.active { background: var(--accent); color: #fff; }
+    .toggle-group.small button { font-size: 10px; padding: 6px 0; }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+
+    input[type="color"] {
+      -webkit-appearance: none;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border-strong);
+      border-radius: 3px;
+      padding: 2px;
+      background: var(--surface);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+
+    .color-presets {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .color-preset {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1.5px solid transparent;
+      cursor: pointer;
+      transition: all 0.12s;
+      flex-shrink: 0;
+    }
+
+    .color-preset:hover { transform: scale(1.15); }
+    .color-preset.selected { border-color: var(--text); }
+
+    .number-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+
+    input[type="number"] {
+      width: 64px;
+      padding: 6px 8px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      border: 1px solid var(--border-strong);
+      border-radius: 3px;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.12s;
+    }
+
+    input[type="number"]:focus { border-color: var(--accent); }
+
+    .number-hint {
+      font-size: 11px;
+      color: var(--text-faint);
+      line-height: 1.4;
+    }
+
+    .process-btn {
+      width: 100%;
+      padding: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 3px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .process-btn:hover:not(:disabled) { background: #1e3329; }
+    .process-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .process-btn:active:not(:disabled) { transform: scale(0.99); }
+
+    .progress-track {
+      height: 3px;
+      background: var(--surface2);
+      border-radius: 2px;
+      margin-top: 12px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.25s;
+      border-radius: 2px;
+    }
+
+    .status-msg {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      min-height: 16px;
+    }
+
+    .status-msg.success { color: var(--accent); }
+    .status-msg.error { color: var(--danger); }
+
+    .preview-area {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .spread-preview {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2rem;
+    }
+
+    .preview-header {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 1rem;
+    }
+
+    .pages-spread {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .page-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+    .page-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--text-faint);
+      letter-spacing: 0.06em;
+    }
+
+    .page-mock {
+      position: relative;
+      height: 200px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.07);
+      background: #fff;
+      transition: width 0.3s;
+    }
+
+    .page-content-area {
+      position: absolute;
+      top: 0; bottom: 0;
+      background: #f8f7f4;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 8px;
+      gap: 5px;
+    }
+
+    .mock-line { height: 1.5px; background: #ddd; border-radius: 1px; }
+    .mock-line.short { width: 60%; }
+    .mock-line.med { width: 80%; }
+    .mock-line.head { height: 3px; background: #bbb; width: 50%; margin-bottom: 4px; }
+
+    .page-note-area {
+      position: absolute;
+      top: 0; bottom: 0;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding: 10px 6px;
+      gap: 0;
+    }
+
+    .note-rule {
+      border: none;
+      border-bottom: 0.75px solid #e0ddd8;
+      width: 100%;
+      margin-bottom: 0;
+      flex-shrink: 0;
+    }
+
+    .spine-line {
+      width: 2px;
+      height: 200px;
+      background: var(--border);
+      flex-shrink: 0;
+      align-self: center;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .info-cell {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0.75rem 1rem;
+    }
+
+    .info-cell .ic-label {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: var(--text-faint);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .info-cell .ic-val {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .how-it-works {
+      background: var(--accent-light);
+      border: 1px solid #c2d4cd;
+      border-radius: 4px;
+      padding: 1.25rem 1.5rem;
+    }
+
+    .how-it-works h3 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .how-it-works ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+
+    .how-it-works li {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      padding-left: 1rem;
+      position: relative;
+      line-height: 1.5;
+    }
+
+    .how-it-works li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--accent-mid);
+      font-size: 11px;
+    }
+
+    @media (max-width: 800px) {
+      main { grid-template-columns: 1fr; padding: 1rem; }
+      .pages-spread { transform: scale(0.82); transform-origin: top center; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>PDF Note Margin Tool</h1>
+  <span>// add writing space for printed books</span>
+</header>
+
+<main>
+  <div class="panel">
+
+    <div class="panel-section">
+      <div class="section-label">01 — Upload</div>
+      <div class="drop-zone" id="dropZone">
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+        <p class="primary" id="dropTitle">Drop PDF here</p>
+        <p class="secondary">or click to browse</p>
+        <button class="browse-btn" onclick="document.getElementById('fileInput').click(); event.stopPropagation();">Choose file</button>
+        <input type="file" id="fileInput" accept=".pdf" style="display:none">
+        <p class="file-name" id="fileName"></p>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">02 — Layout</div>
+
+      <div class="field-label">Note margin width</div>
+      <div class="slider-row">
+        <input type="range" id="marginSlider" min="1" max="4" step="0.25" value="3">
+        <span class="slider-val" id="marginVal">3.00 in</span>
+      </div>
+
+      <div class="field-label">Front page (odd) — note margin side</div>
+      <div class="toggle-group" id="sideToggle">
+        <button class="active" onclick="setSide('right', this)">Right side</button>
+        <button onclick="setSide('left', this)">Left side</button>
+      </div>
+
+      <div class="field-label">Binding gutter (spine side)</div>
+      <div class="slider-row">
+        <input type="range" id="gutterSlider" min="0" max="1.5" step="0.125" value="0.5">
+        <span class="slider-val" id="gutterVal">0.50 in</span>
+      </div>
+
+      <div class="field-label">Page number offset</div>
+      <div class="number-row">
+        <input type="number" id="pageOffset" value="0" min="0" max="20" step="1">
+        <span class="number-hint">Pages to skip before alternating starts.<br>Use 1 if your PDF has a cover page.</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">03 — Ruled lines</div>
+
+      <div class="field-label">Show ruled lines in margin</div>
+      <div class="toggle-group small" id="linesToggle">
+        <button class="active" onclick="setLines(true, this)">Yes — ruled</button>
+        <button onclick="setLines(false, this)">No — blank</button>
+      </div>
+
+      <div id="lineOptions">
+        <div class="field-label">Line spacing</div>
+        <div class="slider-row">
+          <input type="range" id="lineSpacingSlider" min="16" max="36" step="2" value="24">
+          <span class="slider-val" id="lineSpacingVal">24 pt</span>
+        </div>
+
+        <div class="field-label">Line color</div>
+        <div class="color-row">
+          <input type="color" id="lineColorPicker" value="#c8c2b8">
+          <div class="color-presets" id="colorPresets"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">04 — Process</div>
+      <button class="process-btn" id="processBtn" onclick="processFile()" disabled>Process PDF</button>
+      <div class="progress-track" id="progressTrack">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <p class="status-msg" id="statusMsg">Upload a PDF to begin</p>
+    </div>
+
+  </div>
+
+  <div class="preview-area">
+
+    <div class="spread-preview">
+      <div class="preview-header">Page spread preview</div>
+      <div class="pages-spread" id="spreadPreview"></div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="ic-label">Note margin</div>
+        <div class="ic-val" id="infoMargin">3.00 in / 216 pt</div>
+      </div>
+      <div class="info-cell">
+        <div class="ic-label">Binding gutter</div>
+        <div class="ic-val" id="infoGutter">0.50 in / 36 pt</div>
+      </div>
+      <div class="info-cell">
+        <div class="ic-label">New page width</div>
+        <div class="ic-val" id="infoNewWidth">11.5 in (est.)</div>
+      </div>
+      <div class="info-cell">
+        <div class="ic-label">Page offset</div>
+        <div class="ic-val" id="infoOffset">0 pages</div>
+      </div>
+      <div class="info-cell">
+        <div class="ic-label">Ruled lines</div>
+        <div class="ic-val" id="infoLines">Yes — 24 pt</div>
+      </div>
+      <div class="info-cell">
+        <div class="ic-label">Line color</div>
+        <div class="ic-val" style="display:flex; align-items:center; gap:8px;">
+          <span id="infoColorSwatch" style="display:inline-block; width:16px; height:16px; border-radius:3px; border:1px solid var(--border-strong); background:#c8c2b8; flex-shrink:0;"></span>
+          <span id="infoColorHex">#c8c2b8</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="how-it-works">
+      <h3>How it works</h3>
+      <ul>
+        <li>Your PDF is processed entirely in your browser — nothing is uploaded to any server.</li>
+        <li>Each page canvas is expanded by the note margin width. Odd pages get the margin on your chosen side; even pages get the mirror — so the note space always falls on the outer edge when printed duplex.</li>
+        <li>The binding gutter adds blank space on the spine side of each page, keeping content away from the binding.</li>
+        <li>The page offset lets you shift the odd/even assignment — use 1 if your PDF has a cover page that should not be treated as a content page.</li>
+        <li>Ruled lines are drawn at your chosen spacing and color inside the note margin area.</li>
+      </ul>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  let pdfFile   = null;
+  let frontSide = 'right';
+  let showLines = true;
+
+  const PRESETS = [
+    { hex: '#c8c2b8', label: 'Warm gray' },
+    { hex: '#b0c4b8', label: 'Sage' },
+    { hex: '#b8c4d4', label: 'Slate blue' },
+    { hex: '#d4b8b8', label: 'Dusty rose' },
+    { hex: '#c4b8d4', label: 'Lavender' },
+    { hex: '#d4c8a8', label: 'Sand' },
+    { hex: '#a8a8a8', label: 'Medium gray' },
+    { hex: '#000000', label: 'Black' },
+  ];
+
+  const dropZone          = document.getElementById('dropZone');
+  const fileInput         = document.getElementById('fileInput');
+  const marginSlider      = document.getElementById('marginSlider');
+  const marginVal         = document.getElementById('marginVal');
+  const gutterSlider      = document.getElementById('gutterSlider');
+  const gutterVal         = document.getElementById('gutterVal');
+  const lineSpacingSlider = document.getElementById('lineSpacingSlider');
+  const lineSpacingVal    = document.getElementById('lineSpacingVal');
+  const lineColorPicker   = document.getElementById('lineColorPicker');
+  const pageOffsetInput   = document.getElementById('pageOffset');
+  const processBtn        = document.getElementById('processBtn');
+  const statusMsg         = document.getElementById('statusMsg');
+  const progressTrack     = document.getElementById('progressTrack');
+  const progressFill      = document.getElementById('progressFill');
+
+  const presetsEl = document.getElementById('colorPresets');
+  PRESETS.forEach(p => {
+    const btn = document.createElement('div');
+    btn.className = 'color-preset' + (p.hex === lineColorPicker.value ? ' selected' : '');
+    btn.title = p.label;
+    btn.style.background = p.hex;
+    btn.addEventListener('click', () => {
+      lineColorPicker.value = p.hex;
+      presetsEl.querySelectorAll('.color-preset').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      updateInfo(); updatePreview();
+    });
+    presetsEl.appendChild(btn);
+  });
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); });
+  dropZone.addEventListener('click', e => { if (!e.target.classList.contains('browse-btn')) fileInput.click(); });
+  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+  marginSlider.addEventListener('input', () => { marginVal.textContent = parseFloat(marginSlider.value).toFixed(2) + ' in'; updateInfo(); updatePreview(); });
+  gutterSlider.addEventListener('input', () => { gutterVal.textContent = parseFloat(gutterSlider.value).toFixed(2) + ' in'; updateInfo(); updatePreview(); });
+  lineSpacingSlider.addEventListener('input', () => { lineSpacingVal.textContent = lineSpacingSlider.value + ' pt'; updateInfo(); updatePreview(); });
+  lineColorPicker.addEventListener('input', () => { presetsEl.querySelectorAll('.color-preset').forEach(b => b.classList.remove('selected')); updateInfo(); updatePreview(); });
+  pageOffsetInput.addEventListener('input', () => { updateInfo(); updatePreview(); });
+
+  function handleFile(file) {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) { setStatus('Please select a valid PDF file.', 'error'); return; }
+    pdfFile = file;
+    document.getElementById('fileName').textContent = file.name + ' · ' + (file.size / 1024 / 1024).toFixed(1) + ' MB';
+    document.getElementById('dropTitle').textContent = 'File selected';
+    dropZone.classList.add('has-file');
+    processBtn.disabled = false;
+    setStatus('Ready — click Process PDF to continue.', '');
+  }
+
+  function setSide(val, btn) {
+    frontSide = val;
+    document.querySelectorAll('#sideToggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updatePreview();
+  }
+
+  function setLines(val, btn) {
+    showLines = val;
+    document.querySelectorAll('#linesToggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('lineOptions').style.opacity = val ? '1' : '0.4';
+    document.getElementById('lineOptions').style.pointerEvents = val ? '' : 'none';
+    updateInfo(); updatePreview();
+  }
+
+  function hexToRgb01(hex) {
+    return {
+      r: parseInt(hex.slice(1,3), 16) / 255,
+      g: parseInt(hex.slice(3,5), 16) / 255,
+      b: parseInt(hex.slice(5,7), 16) / 255
+    };
+  }
+
+  function updateInfo() {
+    const margin  = parseFloat(marginSlider.value);
+    const gutter  = parseFloat(gutterSlider.value);
+    const spacing = parseInt(lineSpacingSlider.value);
+    const offset  = parseInt(pageOffsetInput.value) || 0;
+    const hex     = lineColorPicker.value;
+    document.getElementById('infoMargin').textContent  = margin.toFixed(2) + ' in / ' + Math.round(margin * 72) + ' pt';
+    document.getElementById('infoGutter').textContent  = gutter.toFixed(2) + ' in / ' + Math.round(gutter * 72) + ' pt';
+    document.getElementById('infoNewWidth').textContent = (8.5 + margin).toFixed(2) + ' in (est.)';
+    document.getElementById('infoOffset').textContent  = offset === 0 ? 'None' : offset + ' page' + (offset !== 1 ? 's' : '');
+    document.getElementById('infoLines').textContent   = showLines ? 'Yes — ' + spacing + ' pt' : 'No — blank';
+    document.getElementById('infoColorSwatch').style.background = hex;
+    document.getElementById('infoColorHex').textContent = hex;
+  }
+
+  function updatePreview() {
+    const container = document.getElementById('spreadPreview');
+    const margin  = parseFloat(marginSlider.value);
+    const gutter  = parseFloat(gutterSlider.value);
+    const backSide = frontSide === 'right' ? 'left' : 'right';
+    const lineColor = lineColorPicker.value;
+    const offset  = parseInt(pageOffsetInput.value) || 0;
+    const totalWidth = 8.5 + margin;
+    const pageH = 200;
+    const pageW = Math.round(130 * (totalWidth / 9));
+    const noteW   = Math.round(pageW * (margin / totalWidth));
+    const gutterW = Math.round(pageW * (gutter / totalWidth));
+    const origW   = pageW - noteW;
+    const spacing   = parseInt(lineSpacingSlider.value);
+    const lineCount = Math.floor((pageH - 20) / (spacing * 0.6));
+
+    function makePage(side, labelText) {
+      const noteOnLeft  = side === 'left';
+      const noteLeft    = noteOnLeft ? 0 : origW;
+      const gutterLeft  = noteOnLeft ? noteW : 0;
+      const contentLeft = noteOnLeft ? (noteW + gutterW) : gutterW;
+      const contentW    = origW - gutterW;
+      let noteInner = '';
+      if (showLines) {
+        const lh = Math.round((spacing / 36) * 18);
+        for (let i = 0; i < lineCount; i++) {
+          noteInner += `<hr class="note-rule" style="margin-top:${lh}px; border-bottom-color:${lineColor}80;">`;
+        }
+      }
+      const offsetNote = offset > 0
+        ? `<div style="position:absolute;bottom:5px;right:6px;font-size:9px;font-family:monospace;color:#aaa;">offset: ${offset}</div>`
+        : '';
+      return `
+        <div class="page-wrap">
+          <div class="page-mock" style="width:${pageW}px; height:${pageH}px;">
+            <div class="page-content-area" style="left:${contentLeft}px; width:${contentW}px;">
+              <div class="mock-line head"></div>
+              <div class="mock-line med"></div>
+              <div class="mock-line"></div>
+              <div class="mock-line short"></div>
+              <div class="mock-line"></div>
+              <div class="mock-line med"></div>
+              <div class="mock-line short"></div>
+              <div class="mock-line"></div>
+            </div>
+            <div style="position:absolute;top:0;bottom:0;left:${gutterLeft}px;width:${gutterW}px;background:rgba(180,160,130,0.22);border-left:1px dashed rgba(150,120,80,0.35);border-right:1px dashed rgba(150,120,80,0.35);"></div>
+            <div class="page-note-area" style="left:${noteLeft}px; width:${noteW}px;">${noteInner}</div>
+            ${offsetNote}
+          </div>
+          <div class="page-label">${labelText}</div>
+        </div>`;
+    }
+
+    const frontLabel = offset % 2 === 0 ? 'Front (odd pages)' : 'Front (even pages)';
+    const backLabel  = offset % 2 === 0 ? 'Back (even pages)' : 'Back (odd pages)';
+    container.innerHTML = makePage(frontSide, frontLabel) + `<div class="spine-line"></div>` + makePage(backSide, backLabel);
+  }
+
+  function setStatus(msg, type) {
+    statusMsg.textContent = msg;
+    statusMsg.className = 'status-msg ' + (type || '');
+  }
+
+  async function processFile() {
+    if (!pdfFile) return;
+    if (typeof PDFLib === 'undefined') {
+      setStatus('Error: pdf-lib not loaded.', 'error');
+      return;
+    }
+    processBtn.disabled = true;
+    progressTrack.style.display = 'block';
+    progressFill.style.width = '3%';
+    setStatus('Loading PDF...', '');
+    try {
+      const arrayBuffer = await pdfFile.arrayBuffer();
+      progressFill.style.width = '10%';
+      const srcDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+      const outDoc = await PDFLib.PDFDocument.create();
+      const total      = srcDoc.getPageCount();
+      const marginPts  = parseFloat(marginSlider.value) * 72;
+      const gutterPts  = parseFloat(gutterSlider.value) * 72;
+      const lineSpacing = parseInt(lineSpacingSlider.value);
+      const offset     = parseInt(pageOffsetInput.value) || 0;
+      const lineHex    = lineColorPicker.value;
+      const lineRgb    = hexToRgb01(lineHex);
+      const backSide   = frontSide === 'right' ? 'left' : 'right';
+      for (let i = 0; i < total; i++) {
+        const adjustedIndex = i + offset;
+        const isFront = adjustedIndex % 2 === 0;
+        const side    = isFront ? frontSide : backSide;
+        const [embeddedPage] = await outDoc.embedPages([srcDoc.getPage(i)]);
+        const { width, height } = embeddedPage;
+        const newWidth = width + marginPts;
+        const newPage  = outDoc.addPage([newWidth, height]);
+        let contentX, contentW;
+        if (side === 'left') {
+          contentX = marginPts;
+          contentW = width - gutterPts;
+        } else {
+          contentX = gutterPts;
+          contentW = width - gutterPts;
+        }
+        newPage.drawPage(embeddedPage, { x: contentX, y: 0, width: contentW, height });
+        if (showLines) {
+          const noteX  = side === 'left' ? 10 : contentX + contentW + 10;
+          const lineW  = marginPts - 20;
+          const startY = height - 30;
+          for (let y = startY; y > 20; y -= lineSpacing) {
+            newPage.drawLine({
+              start: { x: noteX, y },
+              end:   { x: noteX + lineW, y },
+              thickness: 0.5,
+              color: PDFLib.rgb(lineRgb.r, lineRgb.g, lineRgb.b)
+            });
+          }
+        }
+        progressFill.style.width = Math.round(((i + 1) / total) * 82 + 10) + '%';
+        setStatus('Processing page ' + (i + 1) + ' of ' + total + '...', '');
+        if (i % 15 === 0) await new Promise(r => setTimeout(r, 0));
+      }
+      setStatus('Saving file...', '');
+      progressFill.style.width = '96%';
+      const pdfBytes = await outDoc.save();
+      progressFill.style.width = '100%';
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = pdfFile.name.replace(/\.pdf$/i, '_with_margins.pdf');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setStatus('Done! ' + total + ' pages processed. File downloading now.', 'success');
+    } catch (err) {
+      setStatus('Error: ' + err.message, 'error');
+      console.error(err);
+    }
+    processBtn.disabled = false;
+  }
+
+  updatePreview();
+  updateInfo();
+</script>
+</body>
+</html>
