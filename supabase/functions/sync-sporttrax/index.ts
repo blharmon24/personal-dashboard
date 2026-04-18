@@ -36,78 +36,68 @@ async function dbUpsert(table: string, body: object, onConflict: string) {
   return resp.ok ? { data: Array.isArray(data) ? data[0] : data, error: null } : { data: null, error: data }
 }
 
+async function fetchVM(url: string): Promise<any> {
+  let resp: Response
+  try {
+    resp = await fetch(url, { headers: INERTIA_HEADERS, signal: AbortSignal.timeout(10000) })
+  } catch (e: any) {
+    return { error: `fetch failed: ${e.message}` }
+  }
+  if (!resp.ok) return { error: `HTTP ${resp.status}` }
+  const text = await resp.text()
+  try {
+    const data = JSON.parse(text)
+    return { vm: data?.props?.vm ?? data?.vm ?? {} }
+  } catch {
+    return { error: 'Response was not JSON', preview: text.slice(0, 200) }
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
 
   const log: object[] = []
 
   for (const athlete of ATHLETES) {
-    // Upsert athlete row and get back its id
     const { data: athleteRow, error: athleteErr } = await dbUpsert(
       'kids_athletes',
       { sporttrax_id: athlete.sporttrax_id, name: athlete.name, team: athlete.team },
       'sporttrax_id'
     )
-
     if (athleteErr || !athleteRow?.id) {
       log.push({ athlete: athlete.name, error: athleteErr ?? 'no row returned' })
       continue
     }
 
-    let page = 1
-    let hasMore = true
+    // Fetch base page to get season list
+    const base = await fetchVM(`https://sporttrax.com/athletes/${athlete.sporttrax_id}`)
+    if (base.error) {
+      log.push({ athlete: athlete.name, error: base.error })
+      continue
+    }
+
+    const seasonOptions: any[] = base.vm?.season_options ?? []
+    console.log(`${athlete.name} seasons:`, seasonOptions.map((s: any) => s.name))
+
+    // Build list of URLs to fetch: base (current season) + one per historical season_id
+    const seasonIds = seasonOptions.map((s: any) => s.id)
+    const urls = seasonIds.map((id: number) =>
+      `https://sporttrax.com/athletes/${athlete.sporttrax_id}?season_id=${id}`
+    )
+    // Include base URL to catch current season regardless
+    urls.unshift(`https://sporttrax.com/athletes/${athlete.sporttrax_id}`)
+
     let totalSynced = 0
 
-    while (hasMore) {
-      const url = `https://sporttrax.com/athletes/${athlete.sporttrax_id}?page=${page}`
-      console.log(`Fetching: ${url}`)
-
-      let resp: Response
-      try {
-        resp = await fetch(url, {
-          headers: INERTIA_HEADERS,
-          signal: AbortSignal.timeout(10000),
-        })
-      } catch (e: any) {
-        log.push({ athlete: athlete.name, error: `fetch failed: ${e.message}`, url })
-        break
+    for (const url of urls) {
+      const result = url === urls[0] ? base : await fetchVM(url)
+      if (result.error) {
+        log.push({ athlete: athlete.name, url, error: result.error })
+        continue
       }
 
-      console.log(`Response: ${resp.status} ${resp.headers.get('content-type')}`)
-
-      if (!resp.ok) {
-        log.push({ athlete: athlete.name, error: `SportTrax HTTP ${resp.status}` })
-        break
-      }
-
-      const text = await resp.text()
-      console.log(`Body preview: ${text.slice(0, 200)}`)
-
-      let data: any
-      try {
-        data = JSON.parse(text)
-      } catch {
-        log.push({ athlete: athlete.name, error: 'Response was not JSON', preview: text.slice(0, 300) })
-        break
-      }
-
-      const vm = data?.props?.vm ?? data?.vm ?? {}
-      const vmKeys = Object.keys(vm)
-      console.log('vmKeys:', JSON.stringify(vmKeys))
-      console.log('season_options:', JSON.stringify(vm?.season_options))
-      console.log('results_by_season keys:', JSON.stringify(Object.keys(vm?.results_by_season ?? {})))
-
-      const resultsBySeason = vm?.results_by_season ?? {}
-      const raw: any[] = Array.isArray(resultsBySeason)
-        ? resultsBySeason.flatMap((s: any) => s?.results ?? s?.data ?? [s])
-        : Object.values(resultsBySeason).flatMap((v: any) =>
-            Array.isArray(v) ? v : v?.results ?? v?.data ?? []
-          )
-
-      if (!Array.isArray(raw) || raw.length === 0) {
-        log.push({ athlete: athlete.name, page, vmKeys, note: 'no results found at known paths' })
-        break
-      }
+      const raw: any[] = result.vm?.results_by_season ?? []
+      console.log(`${athlete.name} ${url.split('?')[1] ?? 'base'}: ${raw.length} results`)
 
       for (const r of raw) {
         const { error } = await dbUpsert('kids_results', {
@@ -123,13 +113,8 @@ Deno.serve(async (req) => {
             : false,
           is_relay: r.is_relay_team ?? false,
         }, 'sporttrax_result_id')
-
         if (!error) totalSynced++
       }
-
-      const meta = vm?.results?.meta
-      hasMore = meta ? meta.current_page < meta.last_page : false
-      page++
     }
 
     log.push({ athlete: athlete.name, synced: totalSynced })
