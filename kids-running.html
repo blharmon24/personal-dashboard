@@ -154,7 +154,7 @@ const SYNC_URL = `${SUPABASE_URL}/functions/v1/sync-sporttrax`
 const { createClient } = supabase
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-const FILTERS = ['All', '100m', '200m', '400m', 'Relay']
+const FILTERS = ['All', '100m', '200m', '400m', '4x100', '4x200', '4x400']
 const activeFilter = {}
 const chartInstances = {}
 
@@ -251,15 +251,15 @@ function buildBlock(athlete) {
 
 function applyFilter(results, f) {
   if (f === 'All') return results
-  if (f === 'Relay') return results.filter(r => r.is_relay)
-  return results.filter(r => !r.is_relay && r.event_name?.toLowerCase().includes(f.toLowerCase()))
+  if (f.startsWith('4x')) return results.filter(r => r.event_name?.match(new RegExp(f, 'i')))
+  return results.filter(r => r.event_name?.match(new RegExp(`^${f}`, 'i')))
 }
 
 function renderView(athlete, container) {
   const f = activeFilter[athlete.id]
   const rows = applyFilter(athlete.results, f)
   const canvasId = `chart-${athlete.id}`
-  const showChart = f !== 'All' && f !== 'Relay'
+  const showChart = f !== 'All'
 
   // Destroy old chart
   if (chartInstances[canvasId]) {
