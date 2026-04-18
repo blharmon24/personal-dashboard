@@ -14,6 +14,7 @@ const CORS = {
 
 const INERTIA_HEADERS = {
   'X-Inertia': 'true',
+  'X-Inertia-Version': '1e1667a7939f2b63377a36876a22e55c',
   'X-Requested-With': 'XMLHttpRequest',
   'Accept': 'application/json',
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
