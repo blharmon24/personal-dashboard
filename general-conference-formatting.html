@@ -572,6 +572,12 @@
           <input type="range" id="sidePadSlider" min="0" max="1.5" step="0.0625" value="0">
           <span class="slider-val" id="sidePadVal">0.00 in</span>
         </div>
+
+        <div class="field-label">Note line side padding</div>
+        <div class="slider-row">
+          <input type="range" id="linePadSlider" min="0" max="2" step="0.0625" value="0.25">
+          <span class="slider-val" id="linePadVal">0.25 in</span>
+        </div>
       </div>
 
       <div id="sideControls" style="display:none">
@@ -746,6 +752,7 @@
   document.getElementById('bottomGutterSlider').addEventListener('input', function() { document.getElementById('bottomGutterVal').textContent = parseFloat(this.value).toFixed(3) + ' in'; updateInfo(); updatePreview(); });
   document.getElementById('topMarginSlider').addEventListener('input', function() { document.getElementById('topMarginVal').textContent = parseFloat(this.value).toFixed(3) + ' in'; updateInfo(); updatePreview(); });
   document.getElementById('sidePadSlider').addEventListener('input', function() { document.getElementById('sidePadVal').textContent = parseFloat(this.value).toFixed(2) + ' in'; updateInfo(); updatePreview(); });
+  document.getElementById('linePadSlider').addEventListener('input', function() { document.getElementById('linePadVal').textContent = parseFloat(this.value).toFixed(2) + ' in'; updateInfo(); updatePreview(); });
   lineSpacingSlider.addEventListener('input', () => { lineSpacingVal.textContent = lineSpacingSlider.value + ' pt'; updateInfo(); updatePreview(); });
   lineColorPicker.addEventListener('input', () => { presetsEl.querySelectorAll('.color-preset').forEach(b => b.classList.remove('selected')); updateInfo(); updatePreview(); });
   pageOffsetInput.addEventListener('input', () => { updateInfo(); updatePreview(); });
@@ -968,6 +975,7 @@
           const bottomGutterPts = parseFloat(document.getElementById('bottomGutterSlider').value) * 72;
           const topMarginPts    = parseFloat(document.getElementById('topMarginSlider').value) * 72;
           const sidePadPts      = parseFloat(document.getElementById('sidePadSlider').value) * 72;
+          const linePadPts      = parseFloat(document.getElementById('linePadSlider').value) * 72;
 
           // Copy the page directly — preserves the original content stream and text rendering
           const [copiedPage] = await outDoc.copyPages(srcDoc, [i]);
@@ -988,8 +996,8 @@
             const stopY  = newY + 10;
             for (let y = startY; y > stopY; y -= lineSpacing) {
               copiedPage.drawLine({
-                start: { x: newX + 20, y },
-                end:   { x: newX + newW - 20, y },
+                start: { x: newX + linePadPts, y },
+                end:   { x: newX + newW - linePadPts, y },
                 thickness: 0.5,
                 color: PDFLib.rgb(lineRgb.r, lineRgb.g, lineRgb.b)
               });
