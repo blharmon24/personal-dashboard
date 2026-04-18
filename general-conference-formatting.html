@@ -955,6 +955,7 @@
       const lineHex    = lineColorPicker.value;
       const lineRgb    = hexToRgb01(lineHex);
       const backSide   = frontSide === 'right' ? 'left' : 'right';
+      const pageNumFont = await outDoc.embedFont('Helvetica');
       let contentIdx = 0;
       for (let i = 0; i < total; i++) {
         const srcPage   = srcDoc.getPage(i);
@@ -1003,6 +1004,17 @@
               });
             }
           }
+          // Page number at very bottom, below notes
+          const pnText = String(contentIdx);
+          const pnSize = 8;
+          const pnW    = pageNumFont.widthOfTextAtSize(pnText, pnSize);
+          copiedPage.drawText(pnText, {
+            x: newX + (newW - pnW) / 2,
+            y: newY + 4,
+            size: pnSize,
+            font: pageNumFont,
+            color: PDFLib.rgb(0.5, 0.5, 0.5),
+          });
         } else {
           const [embeddedPage] = await outDoc.embedPages([srcPage]);
           const { width, height } = embeddedPage;
@@ -1036,6 +1048,19 @@
               });
             }
           }
+          // Page number at bottom of the margin column
+          const pnText  = String(contentIdx);
+          const pnSize  = 8;
+          const pnW     = pageNumFont.widthOfTextAtSize(pnText, pnSize);
+          const noteX   = side === 'left' ? 10 : contentX + contentW + 10;
+          const lineW   = marginPts - 20;
+          newPage.drawText(pnText, {
+            x: noteX + (lineW - pnW) / 2,
+            y: 10,
+            size: pnSize,
+            font: pageNumFont,
+            color: PDFLib.rgb(0.5, 0.5, 0.5),
+          });
         }
         progressFill.style.width = Math.round(((i + 1) / total) * 82 + 10) + '%';
         setStatus('Processing page ' + (i + 1) + ' of ' + total + '...', '');

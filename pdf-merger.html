@@ -210,18 +210,6 @@
     .merge-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .merge-btn:not(:disabled):hover { opacity: 0.85; }
 
-    .option-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 14px;
-      font-size: 0.9rem;
-      color: var(--muted);
-      cursor: pointer;
-      user-select: none;
-    }
-    .option-row input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
-
     .status { font-size: 0.9rem; padding: 4px 0; }
     .status.success { color: var(--success); }
     .status.error   { color: var(--error); }
@@ -286,10 +274,6 @@
   </div>
 
   <div class="actions">
-    <label class="option-row">
-      <input type="checkbox" id="pageNumbersCheck" checked>
-      Add page numbers
-    </label>
     <button class="merge-btn" id="mergeBtn" disabled>Merge &amp; Download</button>
     <span class="status" id="status"></span>
   </div>
@@ -595,27 +579,6 @@
         pages.forEach(p => merged.addPage(p));
 
         setProgress(Math.round(((i + 1) / total) * 90));
-      }
-
-      // Add page numbers to all non-divider pages
-      if (document.getElementById('pageNumbersCheck').checked) {
-        const allPages = merged.getPages();
-        let pageNum = 0;
-        for (const page of allPages) {
-          if (page.node.get(PDFName.of('GCDividerPage'))) continue;
-          pageNum++;
-          const { width } = page.getSize();
-          const text = String(pageNum);
-          const fontSize = 9;
-          const textWidth = bodyFont.widthOfTextAtSize(text, fontSize);
-          page.drawText(text, {
-            x: (width - textWidth) / 2,
-            y: 14,
-            size: fontSize,
-            font: bodyFont,
-            color: rgb(0.5, 0.5, 0.5),
-          });
-        }
       }
 
       const mergedBytes = await merged.save();
