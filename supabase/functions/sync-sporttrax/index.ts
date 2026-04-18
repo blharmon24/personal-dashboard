@@ -93,6 +93,7 @@ Deno.serve(async (req) => {
 
       const vm = data?.props?.vm ?? data?.vm ?? {}
       const vmKeys = Object.keys(vm)
+      console.log('vmKeys:', JSON.stringify(vmKeys))
 
       const raw: any[] =
         vm?.results?.data ??
