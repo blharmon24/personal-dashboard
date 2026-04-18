@@ -95,12 +95,12 @@ Deno.serve(async (req) => {
       const vmKeys = Object.keys(vm)
       console.log('vmKeys:', JSON.stringify(vmKeys))
 
-      const raw: any[] =
-        vm?.results?.data ??
-        vm?.results ??
-        vm?.athlete_results?.data ??
-        vm?.athlete_results ??
-        []
+      const resultsBySeason = vm?.results_by_season ?? {}
+      const raw: any[] = Array.isArray(resultsBySeason)
+        ? resultsBySeason.flatMap((s: any) => s?.results ?? s?.data ?? [s])
+        : Object.values(resultsBySeason).flatMap((v: any) =>
+            Array.isArray(v) ? v : v?.results ?? v?.data ?? []
+          )
 
       if (!Array.isArray(raw) || raw.length === 0) {
         log.push({ athlete: athlete.name, page, vmKeys, note: 'no results found at known paths' })
