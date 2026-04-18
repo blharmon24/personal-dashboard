@@ -81,6 +81,15 @@ FOR UPDATE TO anon USING (true);</div>
 </div>
 
 <div class="card">
+  <h2>🔍 Debug — inspect raw API data</h2>
+  <p style="color:#cbd5e1;font-size:0.875rem;line-height:1.6;margin-bottom:1rem">If fields like date or event are missing, drag this to your bookmarks bar, go to an athletic.net athlete page, and click it. Open the browser console (F12) to see the raw first result.</p>
+  <div class="bookmarklet-wrap">
+    <a class="bookmarklet-link" style="background:#475569;border-color:#334155" href="javascript:(async function(){const m=location.href.match(/\/athlete\/(\d+)\//);if(!m){alert('Open an athletic.net athlete page first.');return;}const r=await fetch('/api/v1/AthleteBio/GetAthleteBioData?athleteId='+m[1]+'&sport=tf&level=0',{headers:{'accept':'application/json','anet-appinfo':'web:web:0:360'}});const j=await r.json();console.log('=== FULL RESPONSE ===',j);console.log('=== FIRST RESULT ===',j.resultsTF?.[0]);console.log('=== FIRST EVENT ===',j.eventsTF?.[0]);console.log('=== FIRST MEET ===',Object.values(j.meets??{})[0]);alert('Data logged to console (F12)');})();">Debug → Console</a>
+    <p class="drag-hint">☝️ Drag to bookmarks bar, use on athletic.net page, then check F12 console</p>
+  </div>
+</div>
+
+<div class="card">
   <h2>How to use it</h2>
   <div class="usage-step"><strong>1.</strong> Go to <strong>athletic.net</strong> and make sure you're <strong>logged in</strong></div>
   <div class="usage-step"><strong>2.</strong> Navigate to <strong>Tanner's page:</strong> athletic.net/athlete/21290627/track-and-field/all</div>
