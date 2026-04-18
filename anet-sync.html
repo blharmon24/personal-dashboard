@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Athletic.net Sync Setup</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔖</text></svg>">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 2rem; }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.25rem; }
+    .subtitle { color: #64748b; font-size: 0.875rem; margin-bottom: 2rem; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; max-width: 640px; }
+    .card h2 { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin-bottom: 1rem; }
+    .step { display: flex; gap: 1rem; margin-bottom: 1.25rem; }
+    .step-num { background: #3b82f6; color: #fff; font-size: 0.75rem; font-weight: 700; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+    .step p { color: #cbd5e1; font-size: 0.875rem; line-height: 1.6; }
+    .step p strong { color: #f1f5f9; }
+    .bookmarklet-wrap { text-align: center; padding: 1.5rem 1rem; }
+    .bookmarklet-link {
+      display: inline-block;
+      background: #f59e0b;
+      color: #1a1a1a;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      cursor: grab;
+      border: 3px dashed #d97706;
+      user-select: none;
+    }
+    .bookmarklet-link:hover { background: #fbbf24; }
+    .drag-hint { color: #64748b; font-size: 0.78rem; margin-top: 0.75rem; }
+    .divider { border: none; border-top: 1px solid #334155; margin: 1.25rem 0; }
+    .usage-step { background: #0f172a; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; font-size: 0.875rem; color: #94a3b8; }
+    .usage-step strong { color: #e2e8f0; }
+    a.back { display: inline-flex; align-items: center; gap: 0.4rem; color: #3b82f6; font-size: 0.875rem; text-decoration: none; margin-bottom: 1.5rem; }
+    a.back:hover { color: #60a5fa; }
+  </style>
+</head>
+<body>
+
+<a class="back" href="index.html">← Back to Dashboard</a>
+
+<h1>🔖 Athletic.net Sync Bookmarklet</h1>
+<p class="subtitle">A one-click tool to sync your kids' athletic.net results into the dashboard.</p>
+
+<div class="card">
+  <h2>Step 1 — Add the bookmarklet to your bookmarks bar</h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <p>First, make sure your <strong>bookmarks bar is visible</strong>. In Chrome: press <strong>Ctrl+Shift+B</strong> to toggle it on.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <p><strong>Drag the button below</strong> up to your bookmarks bar and drop it there. It will appear as a bookmark called "Sync → Supabase".</p>
+  </div>
+
+  <div class="bookmarklet-wrap">
+    <a class="bookmarklet-link" href="javascript:(async function(){const SB='https://ebdsxcbpnhevzkbpdxry.supabase.co';const KEY='sb_publishable_2chleZ28vhYAQqpW0RaNeg_0DYo_1v4';const IDS={21290627:'Tanner Harmon',22163804:'Luke Harmon'};const m=location.href.match(/\/athlete\/(\d+)\//);if(!m){alert('Open an athletic.net athlete page first.');return;}const aid=parseInt(m[1]);const name=IDS[aid];if(!name){alert('Athlete '+aid+' not in dashboard.');return;}const el=document.createElement('div');el.style='position:fixed;top:20px;right:20px;background:#1e293b;color:#f1f5f9;padding:1rem 1.5rem;border-radius:8px;z-index:99999;font-family:system-ui;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,.5);min-width:220px';el.textContent='Syncing '+name+'...';document.body.appendChild(el);try{const r=await fetch('/api/v1/AthleteBio/GetAthleteBioData?athleteId='+aid+'&sport=tf&level=0',{headers:{'accept':'application/json','anet-appinfo':'web:web:0:360'}});if(!r.ok){el.textContent='Fetch failed: HTTP '+r.status;setTimeout(()=>el.remove(),4000);return;}const j=await r.json();const results=j.resultsTF??[];const evts=j.eventsTF??{};const meets=j.meets??{};const en={};for(const e of evts){let n=e.EventName??e.Name??'';n=n.replace(/^(\d+(?:\.\d+)?)\s+[Mm]eters?$/,'$1m');n=n.replace(/^(4x\d+).*$/,'$1');en[e.IDEvent]=n;}const ar=await fetch(SB+'/rest/v1/kids_athletes?name=eq.'+encodeURIComponent(name),{headers:{'apikey':KEY,'Authorization':'Bearer '+KEY}});const athletes=await ar.json();if(!athletes?.length){el.textContent='Run SportTrax sync first.';setTimeout(()=>el.remove(),4000);return;}const row=athletes[0];let synced=0;for(const r of results){if(r.AthleteID!=null&&r.AthleteID!==aid)continue;const evtName=en[r.IDEvent]??null;const mo=meets[String(r.MeetID)]??{};const mn=mo.Name??mo.MeetName??null;let mk=r.Result??r.mark??null;if(mk)mk=mk.replace(/a$/,'');const rd=r.Date?r.Date.split('T')[0]:null;const pl=r.Place!=null?(parseInt(String(r.Place),10)||null):null;const pr=r.PersonalBest!=null?r.PersonalBest!==0:false;const rel=evtName?evtName.startsWith('4x'):false;const up=await fetch(SB+'/rest/v1/kids_results?on_conflict=athleticnet_result_id',{method:'POST',headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({athlete_id:row.id,athleticnet_result_id:r.IDResult,meet_name:mn,race_date:rd,event_name:evtName||null,mark:mk,place:pl,is_pr:pr,is_relay:rel})});if(up.ok)synced++;}el.style.background='#166534';el.textContent='✓ Synced '+synced+' results for '+name;setTimeout(()=>el.remove(),4000);}catch(e){el.style.background='#7f1d1d';el.textContent='Error: '+e.message;setTimeout(()=>el.remove(),5000);}})();">Sync → Supabase</a>
+    <p class="drag-hint">☝️ Drag this button to your bookmarks bar</p>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <p>You should now see <strong>"Sync → Supabase"</strong> in your bookmarks bar.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Step 2 — One more thing: allow the bookmarklet to write to Supabase</h2>
+  <p style="color:#cbd5e1;font-size:0.875rem;line-height:1.6;margin-bottom:1rem">Run this SQL in the <strong>Supabase SQL editor</strong> to allow the bookmarklet to save results:</p>
+  <div class="usage-step" style="font-family:monospace;font-size:0.82rem;color:#7dd3fc;white-space:pre-wrap">CREATE POLICY "allow anon insert" ON kids_results
+FOR INSERT TO anon WITH CHECK (true);
+
+CREATE POLICY "allow anon update" ON kids_results
+FOR UPDATE TO anon USING (true);</div>
+</div>
+
+<div class="card">
+  <h2>How to use it</h2>
+  <div class="usage-step"><strong>1.</strong> Go to <strong>athletic.net</strong> and make sure you're <strong>logged in</strong></div>
+  <div class="usage-step"><strong>2.</strong> Navigate to <strong>Tanner's page:</strong> athletic.net/athlete/21290627/track-and-field/all</div>
+  <div class="usage-step"><strong>3.</strong> Click <strong>"Sync → Supabase"</strong> in your bookmarks bar — a green confirmation will appear on the page</div>
+  <div class="usage-step"><strong>4.</strong> Navigate to <strong>Luke's page:</strong> athletic.net/athlete/22163804/track-and-field/all</div>
+  <div class="usage-step"><strong>5.</strong> Click <strong>"Sync → Supabase"</strong> again</div>
+  <div class="usage-step"><strong>6.</strong> Go back to <strong>Kids Running</strong> and refresh — results will be there</div>
+</div>
+
+</body>
+</html>
