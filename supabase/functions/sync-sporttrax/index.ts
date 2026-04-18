@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const ATHLETES = [
   { sporttrax_id: 10607, name: 'Luke Harmon', team: 'Cyprus' },
@@ -8,6 +8,7 @@ const ATHLETES = [
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 const INERTIA_HEADERS = {
