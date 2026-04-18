@@ -344,7 +344,7 @@ function renderView(athlete, container) {
       const times = sorted.map(r => parseTime(r.mark))
       const prFlags = sorted.map(r => r.is_pr)
 
-      const ctx = document.getElementById(canvasId).getContext('2d')
+      const ctx = container.querySelector('#' + canvasId).getContext('2d')
       chartInstances[canvasId] = new Chart(ctx, {
         type: 'line',
         data: {
