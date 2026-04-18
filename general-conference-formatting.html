@@ -947,11 +947,8 @@
         const isDivider = srcPage.node.get(PDFLib.PDFName.of('GCDividerPage'));
 
         if (isDivider) {
-          // Copy session divider pages as-is — no margin, no ruled lines
-          const [embeddedPage] = await outDoc.embedPages([srcPage]);
-          const { width, height } = embeddedPage;
-          const newPage = outDoc.addPage([width, height]);
-          newPage.drawPage(embeddedPage, { x: 0, y: 0, width, height });
+          const [copied] = await outDoc.copyPages(srcDoc, [i]);
+          outDoc.addPage(copied);
           progressFill.style.width = Math.round(((i + 1) / total) * 82 + 10) + '%';
           setStatus('Copying divider page ' + (i + 1) + ' of ' + total + '...', '');
           if (i % 15 === 0) await new Promise(r => setTimeout(r, 0));
@@ -959,27 +956,38 @@
         }
 
         contentIdx++;
-        const [embeddedPage] = await outDoc.embedPages([srcPage]);
-        const { width, height } = embeddedPage;
 
         if (notesPosition === 'bottom') {
           const bottomGutterPts = parseFloat(document.getElementById('bottomGutterSlider').value) * 72;
           const topMarginPts    = parseFloat(document.getElementById('topMarginSlider').value) * 72;
-          const totalH = topMarginPts + height + bottomGutterPts + marginPts;
-          const newPage = outDoc.addPage([width, totalH]);
-          newPage.drawPage(embeddedPage, { x: 0, y: marginPts + bottomGutterPts, width, height });
+
+          // Copy the page directly — preserves the original content stream and text rendering
+          const [copiedPage] = await outDoc.copyPages(srcDoc, [i]);
+          outDoc.addPage(copiedPage);
+
+          // Extend the MediaBox: push bottom down for notes, push top up for top margin
+          const mb     = copiedPage.getMediaBox();
+          const newY   = mb.y - (bottomGutterPts + marginPts);
+          const newH   = mb.height + topMarginPts + bottomGutterPts + marginPts;
+          copiedPage.setMediaBox(mb.x, newY, mb.width, newH);
+          copiedPage.setCropBox(mb.x, newY, mb.width, newH);
+
+          // Draw ruled lines below the original content baseline
           if (showLines) {
-            const startY = marginPts - lineSpacing;
-            for (let y = startY; y > 10; y -= lineSpacing) {
-              newPage.drawLine({
-                start: { x: 20, y },
-                end:   { x: width - 20, y },
+            const startY = mb.y - bottomGutterPts - lineSpacing;
+            const stopY  = newY + 10;
+            for (let y = startY; y > stopY; y -= lineSpacing) {
+              copiedPage.drawLine({
+                start: { x: mb.x + 20, y },
+                end:   { x: mb.x + mb.width - 20, y },
                 thickness: 0.5,
                 color: PDFLib.rgb(lineRgb.r, lineRgb.g, lineRgb.b)
               });
             }
           }
         } else {
+          const [embeddedPage] = await outDoc.embedPages([srcPage]);
+          const { width, height } = embeddedPage;
           const adjustedIndex = contentIdx + offset - 1;
           const isFront = adjustedIndex % 2 === 0;
           const side    = isFront ? frontSide : backSide;
