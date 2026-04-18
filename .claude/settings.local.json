@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "WebFetch(domain:results.runnercard.com)",
+      "WebFetch(domain:www.runnercard.com)",
+      "WebFetch(domain:www.athletic.net)",
+      "Bash(supabase functions *)"
+    ]
+  }
+}

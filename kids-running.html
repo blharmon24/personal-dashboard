@@ -141,9 +141,8 @@
   <h1>🏃 Kids Running</h1>
   <span class="sync-meta" id="sync-meta">Loading…</span>
   <button class="btn-sync" id="sync-btn" onclick="syncNow()">Sync SportTrax</button>
-  <button class="btn-sync" id="sync-anet-btn" onclick="syncAthleticNet()" style="background:#7c3aed">Sync Athletic.net</button>
   <button class="btn-sync" id="delete-btn" onclick="deleteAllResults()" style="background:#dc2626">Delete All Results</button>
-  <span style="font-size:0.72rem;color:#475569">v2026.04.18.17</span>
+  <span style="font-size:0.72rem;color:#475569">v2026.04.18.21</span>
 </div>
 
 <div class="content" id="content">
@@ -154,7 +153,6 @@
 const SUPABASE_URL = 'https://ebdsxcbpnhevzkbpdxry.supabase.co'
 const SUPABASE_ANON_KEY = 'sb_publishable_2chleZ28vhYAQqpW0RaNeg_0DYo_1v4'
 const SYNC_URL = `${SUPABASE_URL}/functions/v1/sync-sporttrax`
-const SYNC_ANET_URL = `${SUPABASE_URL}/functions/v1/sync-athleticnet`
 
 const { createClient } = supabase
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -483,34 +481,6 @@ async function deleteAllResults() {
   }
 }
 
-async function syncAthleticNet() {
-  const btn = document.getElementById('sync-anet-btn')
-  const meta = document.getElementById('sync-meta')
-  btn.disabled = true
-  btn.textContent = 'Syncing…'
-  meta.textContent = 'Fetching from Athletic.net…'
-  try {
-    const resp = await fetch(SYNC_ANET_URL, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-    })
-    const json = await resp.json()
-    console.log('Athletic.net sync response:', JSON.stringify(json, null, 2))
-    if (json.ok) {
-      meta.textContent = 'Sync complete — reloading…'
-      await load()
-    } else {
-      meta.textContent = 'Sync error — check console'
-      console.error(json)
-    }
-  } catch (e) {
-    meta.textContent = 'Sync failed: ' + e.message
-    console.error('Sync exception:', e)
-  } finally {
-    btn.disabled = false
-    btn.textContent = 'Sync Athletic.net'
-  }
-}
 
 load()
 </script>
