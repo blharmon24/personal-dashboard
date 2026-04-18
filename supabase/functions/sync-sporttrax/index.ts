@@ -69,55 +69,33 @@ Deno.serve(async (req) => {
       continue
     }
 
-    // Fetch base page to get season list
-    const base = await fetchVM(`https://sporttrax.com/athletes/${athlete.sporttrax_id}`)
-    if (base.error) {
-      log.push({ athlete: athlete.name, error: base.error })
+    const { vm, error: fetchErr } = await fetchVM(`https://sporttrax.com/athletes/${athlete.sporttrax_id}`)
+    if (fetchErr) {
+      log.push({ athlete: athlete.name, error: fetchErr })
       continue
     }
 
-    const seasonOptions: any[] = base.vm?.season_options ?? []
-    console.log(`${athlete.name} seasons:`, seasonOptions.map((s: any) => s.name))
-
-    // Build list of URLs to fetch: base (current season) + one per historical season_id
-    const seasonIds = seasonOptions.map((s: any) => s.id)
-    const urls = seasonIds.map((id: number) =>
-      `https://sporttrax.com/athletes/${athlete.sporttrax_id}?season_id=${id}`
-    )
-    // Include base URL to catch current season regardless
-    urls.unshift(`https://sporttrax.com/athletes/${athlete.sporttrax_id}`)
-
+    const raw: any[] = vm?.results_by_season ?? []
     let totalSynced = 0
 
-    for (const url of urls) {
-      const result = url === urls[0] ? base : await fetchVM(url)
-      if (result.error) {
-        log.push({ athlete: athlete.name, url, error: result.error })
-        continue
-      }
-
-      const raw: any[] = result.vm?.results_by_season ?? []
-      console.log(`${athlete.name} ${url.split('?')[1] ?? 'base'}: ${raw.length} results`)
-
-      for (const r of raw) {
-        const { error } = await dbUpsert('kids_results', {
-          athlete_id: athleteRow.id,
-          sporttrax_result_id: r.id,
-          meet_name: r.meet_name?.name ?? r.meet?.name ?? null,
-          race_date: r.at ? r.at.split('T')[0] : null,
-          event_name: r.event?.name ?? r.meet_event?.event?.name ?? null,
-          mark: r.mark?.mark_english ?? r.display?.mark_english ?? null,
-          place: r.meet_event_place ?? r.place ?? null,
-          is_pr: Array.isArray(r.result_achievements)
-            ? r.result_achievements.some((a: any) => a.achievement_type === 'personal_record')
-            : false,
-          is_relay: r.is_relay_team ?? false,
-        }, 'sporttrax_result_id')
-        if (!error) totalSynced++
-      }
+    for (const r of raw) {
+      const { error } = await dbUpsert('kids_results', {
+        athlete_id: athleteRow.id,
+        sporttrax_result_id: r.id,
+        meet_name: r.meet_name?.name ?? r.meet?.name ?? null,
+        race_date: r.at ? r.at.split('T')[0] : null,
+        event_name: r.event?.name ?? r.meet_event?.event?.name ?? null,
+        mark: r.mark?.mark_english ?? r.display?.mark_english ?? null,
+        place: r.meet_event_place ?? r.place ?? null,
+        is_pr: Array.isArray(r.result_achievements)
+          ? r.result_achievements.some((a: any) => a.achievement_type === 'personal_record')
+          : false,
+        is_relay: r.is_relay_team ?? false,
+      }, 'sporttrax_result_id')
+      if (!error) totalSynced++
     }
 
-    log.push({ athlete: athlete.name, synced: totalSynced })
+    log.push({ athlete: athlete.name, synced: totalSynced, total: raw.length })
   }
 
   return new Response(JSON.stringify({ ok: true, log }), {
