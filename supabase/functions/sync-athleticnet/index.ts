@@ -1,5 +1,7 @@
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const ANET_TOKEN = Deno.env.get('ANET_TOKEN') ?? ''
+const ANET_COOKIE = Deno.env.get('ANET_COOKIE') ?? ''
 
 const ATHLETES = [
   { athleticnet_id: 21290627, name: 'Tanner Harmon' },
@@ -15,8 +17,10 @@ const CORS = {
 const ANET_HEADERS = {
   'accept': 'application/json, text/plain, */*',
   'anet-appinfo': 'web:web:0:360',
-  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-  'referer': 'https://www.athletic.net/',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
+  'referer': 'https://www.athletic.net/athlete/21290627/track-and-field/all',
+  'anet-site-roles-token': ANET_TOKEN,
+  'cookie': ANET_COOKIE,
 }
 
 const DB = {
