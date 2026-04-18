@@ -142,7 +142,7 @@
   <button class="btn-sync" id="sync-btn" onclick="syncNow()">Sync SportTrax</button>
   <button class="btn-sync" id="sync-anet-btn" onclick="syncAthleticNet()" style="background:#7c3aed">Sync Athletic.net</button>
   <button class="btn-sync" id="delete-btn" onclick="deleteAllResults()" style="background:#dc2626">Delete All Results</button>
-  <span style="font-size:0.72rem;color:#475569">v2026.04.18.11</span>
+  <span style="font-size:0.72rem;color:#475569">v2026.04.18.12</span>
 </div>
 
 <div class="content" id="content">
@@ -154,7 +154,6 @@ const SUPABASE_URL = 'https://ebdsxcbpnhevzkbpdxry.supabase.co'
 const SUPABASE_ANON_KEY = 'sb_publishable_2chleZ28vhYAQqpW0RaNeg_0DYo_1v4'
 const SYNC_URL = `${SUPABASE_URL}/functions/v1/sync-sporttrax`
 const SYNC_ANET_URL = `${SUPABASE_URL}/functions/v1/sync-athleticnet`
-const DELETE_URL = `${SUPABASE_URL}/functions/v1/delete-results`
 
 const { createClient } = supabase
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -462,17 +461,13 @@ async function deleteAllResults() {
   btn.textContent = 'Deleting…'
   meta.textContent = 'Deleting all results…'
   try {
-    const resp = await fetch(DELETE_URL, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
-    })
-    const json = await resp.json()
-    if (json.ok) {
+    const { error } = await db.from('kids_results').delete().gte('id', 0)
+    if (error) {
+      meta.textContent = 'Delete failed — check console'
+      console.error(error)
+    } else {
       meta.textContent = 'All results deleted.'
       await load()
-    } else {
-      meta.textContent = 'Delete failed — check console'
-      console.error(json)
     }
   } catch (e) {
     meta.textContent = 'Delete failed: ' + e.message
