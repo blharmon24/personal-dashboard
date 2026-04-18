@@ -94,6 +94,8 @@ Deno.serve(async (req) => {
       const vm = data?.props?.vm ?? data?.vm ?? {}
       const vmKeys = Object.keys(vm)
       console.log('vmKeys:', JSON.stringify(vmKeys))
+      console.log('season_options:', JSON.stringify(vm?.season_options))
+      console.log('results_by_season keys:', JSON.stringify(Object.keys(vm?.results_by_season ?? {})))
 
       const resultsBySeason = vm?.results_by_season ?? {}
       const raw: any[] = Array.isArray(resultsBySeason)
