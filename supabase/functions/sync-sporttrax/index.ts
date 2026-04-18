@@ -1,4 +1,5 @@
-import { createClient } from 'jsr:@supabase/supabase-js@2'
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const ATHLETES = [
   { sporttrax_id: 10607, name: 'Luke Harmon', team: 'Cyprus' },
@@ -18,33 +19,43 @@ const INERTIA_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
 }
 
+const DB = {
+  'apikey': SERVICE_KEY,
+  'Authorization': `Bearer ${SERVICE_KEY}`,
+  'Content-Type': 'application/json',
+}
+
+async function dbUpsert(table: string, body: object, onConflict: string) {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
+    method: 'POST',
+    headers: { ...DB, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(body),
+  })
+  const data = await resp.json()
+  return resp.ok ? { data: Array.isArray(data) ? data[0] : data, error: null } : { data: null, error: data }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
-
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
 
   const log: object[] = []
 
   for (const athlete of ATHLETES) {
-    // Upsert athlete row
-    const { data: athleteRow, error: athleteErr } = await supabase
-      .from('kids_athletes')
-      .upsert({ sporttrax_id: athlete.sporttrax_id, name: athlete.name, team: athlete.team }, { onConflict: 'sporttrax_id' })
-      .select('id')
-      .single()
+    // Upsert athlete row and get back its id
+    const { data: athleteRow, error: athleteErr } = await dbUpsert(
+      'kids_athletes',
+      { sporttrax_id: athlete.sporttrax_id, name: athlete.name, team: athlete.team },
+      'sporttrax_id'
+    )
 
-    if (athleteErr || !athleteRow) {
-      log.push({ athlete: athlete.name, error: athleteErr?.message ?? 'no row returned' })
+    if (athleteErr || !athleteRow?.id) {
+      log.push({ athlete: athlete.name, error: athleteErr ?? 'no row returned' })
       continue
     }
 
     let page = 1
     let hasMore = true
     let totalSynced = 0
-    let vmKeys: string[] = []
 
     while (hasMore) {
       const url = `https://sporttrax.com/athletes/${athlete.sporttrax_id}?page=${page}`
@@ -64,7 +75,7 @@ Deno.serve(async (req) => {
       console.log(`Response: ${resp.status} ${resp.headers.get('content-type')}`)
 
       if (!resp.ok) {
-        log.push({ athlete: athlete.name, error: `SportTrax HTTP ${resp.status} page ${page}` })
+        log.push({ athlete: athlete.name, error: `SportTrax HTTP ${resp.status}` })
         break
       }
 
@@ -78,10 +89,10 @@ Deno.serve(async (req) => {
         log.push({ athlete: athlete.name, error: 'Response was not JSON', preview: text.slice(0, 300) })
         break
       }
-      const vm = data?.props?.vm ?? {}
-      if (page === 1) vmKeys = Object.keys(vm)
 
-      // Try known result paths in order
+      const vm = data?.props?.vm ?? {}
+      const vmKeys = Object.keys(vm)
+
       const raw: any[] =
         vm?.results?.data ??
         vm?.results ??
@@ -95,7 +106,7 @@ Deno.serve(async (req) => {
       }
 
       for (const r of raw) {
-        const { error } = await supabase.from('kids_results').upsert({
+        const { error } = await dbUpsert('kids_results', {
           athlete_id: athleteRow.id,
           sporttrax_result_id: r.id,
           meet_name: r.meet_name?.name ?? r.meet?.name ?? null,
@@ -107,12 +118,11 @@ Deno.serve(async (req) => {
             ? r.result_achievements.some((a: any) => a.achievement_type === 'personal_record')
             : false,
           is_relay: r.is_relay_team ?? false,
-        }, { onConflict: 'sporttrax_result_id' })
+        }, 'sporttrax_result_id')
 
         if (!error) totalSynced++
       }
 
-      // Pagination
       const meta = vm?.results?.meta
       hasMore = meta ? meta.current_page < meta.last_page : false
       page++
