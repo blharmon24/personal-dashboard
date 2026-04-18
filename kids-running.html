@@ -213,11 +213,19 @@ async function load() {
     }
   })
 
-  const total = (results ?? []).length
-  const newest = results?.[0]?.created_at
-  document.getElementById('sync-meta').textContent = newest
-    ? `${total} results · last synced ${new Date(newest).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-    : `${total} results loaded`
+  const all = results ?? []
+  const total = all.length
+  const fromST = all.filter(r => r.sporttrax_result_id != null).length
+  const fromAN = all.filter(r => r.athleticnet_result_id != null).length
+  const newest = all[0]?.created_at
+  const sourceParts = [
+    fromST ? `SportTrax: ${fromST}` : '',
+    fromAN ? `Athletic.net: ${fromAN}` : '',
+  ].filter(Boolean).join(' · ')
+  const dateStr = newest ? new Date(newest).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
+  document.getElementById('sync-meta').textContent = dateStr
+    ? `${total} results (${sourceParts}) · last synced ${dateStr}`
+    : total ? `${total} results (${sourceParts})` : 'No data yet'
 }
 
 function buildBlock(athlete) {
