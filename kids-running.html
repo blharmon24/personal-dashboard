@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kids Running</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
@@ -68,6 +69,25 @@
     }
     .ftab:hover { border-color: #3b82f6; color: #e2e8f0; }
     .ftab.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+
+    .chart-wrap {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .chart-legend {
+      display: flex;
+      gap: 1.25rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+    .chart-legend span { display: flex; align-items: center; gap: 0.35rem; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .dot-blue { background: #3b82f6; }
+    .dot-gold { background: #f59e0b; }
 
     .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #334155; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -136,6 +156,28 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 const FILTERS = ['All', '100m', '200m', '400m', 'Relay']
 const activeFilter = {}
+const chartInstances = {}
+
+// Parse "50.19" or "1:52.34" into total seconds
+function parseTime(mark) {
+  if (!mark) return null
+  if (mark.includes(':')) {
+    const [min, sec] = mark.split(':')
+    return parseFloat(min) * 60 + parseFloat(sec)
+  }
+  return parseFloat(mark)
+}
+
+// Format seconds back to "50.19" or "1:52.34"
+function fmtTime(secs) {
+  if (secs == null || isNaN(secs)) return '—'
+  if (secs >= 60) {
+    const min = Math.floor(secs / 60)
+    const sec = (secs % 60).toFixed(2).padStart(5, '0')
+    return `${min}:${sec}`
+  }
+  return secs.toFixed(2)
+}
 
 async function load() {
   const { data: athletes } = await db.from('kids_athletes').select('*').order('name')
@@ -186,7 +228,7 @@ function buildBlock(athlete) {
       <span class="result-count">${athlete.results.length} result${athlete.results.length !== 1 ? 's' : ''}</span>
     </div>
     <div class="filter-tabs" id="tabs-${athlete.id}"></div>
-    <div id="tbl-${athlete.id}"></div>
+    <div id="view-${athlete.id}"></div>
   `
 
   const tabsEl = block.querySelector(`#tabs-${athlete.id}`)
@@ -198,12 +240,12 @@ function buildBlock(athlete) {
       activeFilter[athlete.id] = f
       tabsEl.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'))
       btn.classList.add('active')
-      renderTable(athlete, block.querySelector(`#tbl-${athlete.id}`))
+      renderView(athlete, block.querySelector(`#view-${athlete.id}`))
     }
     tabsEl.appendChild(btn)
   })
 
-  renderTable(athlete, block.querySelector(`#tbl-${athlete.id}`))
+  renderView(athlete, block.querySelector(`#view-${athlete.id}`))
   return block
 }
 
@@ -213,25 +255,34 @@ function applyFilter(results, f) {
   return results.filter(r => !r.is_relay && r.event_name?.toLowerCase().includes(f.toLowerCase()))
 }
 
-function placeHtml(p) {
-  if (!p) return '—'
-  const cls = p === 1 ? 'p1' : p === 2 ? 'p2' : p === 3 ? 'p3' : ''
-  const sfx = p === 1 ? 'st' : p === 2 ? 'nd' : p === 3 ? 'rd' : 'th'
-  return cls ? `<span class="${cls}">${p}${sfx}</span>` : `${p}${sfx}`
-}
+function renderView(athlete, container) {
+  const f = activeFilter[athlete.id]
+  const rows = applyFilter(athlete.results, f)
+  const canvasId = `chart-${athlete.id}`
+  const showChart = f !== 'All' && f !== 'Relay'
 
-function fmtDate(d) {
-  if (!d) return '—'
-  return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
+  // Destroy old chart
+  if (chartInstances[canvasId]) {
+    chartInstances[canvasId].destroy()
+    delete chartInstances[canvasId]
+  }
 
-function renderTable(athlete, container) {
-  const rows = applyFilter(athlete.results, activeFilter[athlete.id])
   if (!rows.length) {
     container.innerHTML = '<div class="empty">No results for this filter.</div>'
     return
   }
-  container.innerHTML = `
+
+  // Build chart HTML + table HTML
+  const chartHtml = showChart ? `
+    <div class="chart-wrap">
+      <div class="chart-legend">
+        <span><span class="dot dot-blue"></span> Race time</span>
+        <span><span class="dot dot-gold"></span> Personal record</span>
+      </div>
+      <canvas id="${canvasId}" height="120"></canvas>
+    </div>` : ''
+
+  container.innerHTML = chartHtml + `
     <div class="table-wrap">
       <table>
         <thead><tr>
@@ -247,8 +298,86 @@ function renderTable(athlete, container) {
           </tr>`).join('')}
         </tbody>
       </table>
-    </div>
-  `
+    </div>`
+
+  if (showChart) {
+    const sorted = [...rows]
+      .filter(r => r.race_date && parseTime(r.mark) !== null)
+      .sort((a, b) => a.race_date.localeCompare(b.race_date))
+
+    if (sorted.length >= 2) {
+      const labels = sorted.map(r => fmtDate(r.race_date))
+      const times = sorted.map(r => parseTime(r.mark))
+      const prFlags = sorted.map(r => r.is_pr)
+
+      const ctx = document.getElementById(canvasId).getContext('2d')
+      chartInstances[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: times,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59,130,246,0.08)',
+            borderWidth: 2,
+            pointBackgroundColor: prFlags.map(p => p ? '#f59e0b' : '#3b82f6'),
+            pointBorderColor: prFlags.map(p => p ? '#f59e0b' : '#3b82f6'),
+            pointRadius: prFlags.map(p => p ? 7 : 5),
+            pointHoverRadius: 8,
+            tension: 0.25,
+            fill: true,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => labels[items[0].dataIndex],
+                label: (item) => {
+                  const pr = prFlags[item.dataIndex] ? ' ⚡ PR' : ''
+                  return `  ${fmtTime(item.raw)}${pr}`
+                }
+              },
+              backgroundColor: '#1e293b',
+              titleColor: '#94a3b8',
+              bodyColor: '#f1f5f9',
+              borderColor: '#334155',
+              borderWidth: 1,
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: '#1e293b' },
+              ticks: { color: '#64748b', font: { size: 11 }, maxRotation: 30 }
+            },
+            y: {
+              reverse: true,
+              grid: { color: '#334155' },
+              ticks: {
+                color: '#64748b',
+                font: { size: 11 },
+                callback: (v) => fmtTime(v)
+              }
+            }
+          }
+        }
+      })
+    }
+  }
+}
+
+function placeHtml(p) {
+  if (!p) return '—'
+  const cls = p === 1 ? 'p1' : p === 2 ? 'p2' : p === 3 ? 'p3' : ''
+  const sfx = p === 1 ? 'st' : p === 2 ? 'nd' : p === 3 ? 'rd' : 'th'
+  return cls ? `<span class="${cls}">${p}${sfx}</span>` : `${p}${sfx}`
+}
+
+function fmtDate(d) {
+  if (!d) return '—'
+  return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 async function syncNow() {
