@@ -48,14 +48,36 @@ Deno.serve(async (req) => {
 
     while (hasMore) {
       const url = `https://sporttrax.com/athletes/${athlete.sporttrax_id}?page=${page}`
-      const resp = await fetch(url, { headers: INERTIA_HEADERS })
+      console.log(`Fetching: ${url}`)
+
+      let resp: Response
+      try {
+        resp = await fetch(url, {
+          headers: INERTIA_HEADERS,
+          signal: AbortSignal.timeout(10000),
+        })
+      } catch (e: any) {
+        log.push({ athlete: athlete.name, error: `fetch failed: ${e.message}`, url })
+        break
+      }
+
+      console.log(`Response: ${resp.status} ${resp.headers.get('content-type')}`)
 
       if (!resp.ok) {
         log.push({ athlete: athlete.name, error: `SportTrax HTTP ${resp.status} page ${page}` })
         break
       }
 
-      const data = await resp.json()
+      const text = await resp.text()
+      console.log(`Body preview: ${text.slice(0, 200)}`)
+
+      let data: any
+      try {
+        data = JSON.parse(text)
+      } catch {
+        log.push({ athlete: athlete.name, error: 'Response was not JSON', preview: text.slice(0, 300) })
+        break
+      }
       const vm = data?.props?.vm ?? {}
       if (page === 1) vmKeys = Object.keys(vm)
 
