@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kids Running</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+    .page-header {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .page-header h1 { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; }
+    .sync-meta { flex: 1; font-size: 0.8rem; color: #64748b; }
+
+    .btn-sync {
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .btn-sync:hover { background: #2563eb; }
+    .btn-sync:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+
+    .content { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+
+    .athlete-block { margin-bottom: 2.5rem; }
+    .athlete-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .athlete-heading h2 { font-size: 1.2rem; font-weight: 700; color: #f1f5f9; }
+    .badge-pr-count {
+      background: #f59e0b;
+      color: #1a1a1a;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+    }
+    .result-count { color: #64748b; font-size: 0.82rem; }
+
+    .filter-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.9rem; flex-wrap: wrap; }
+    .ftab {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 0.3rem 0.8rem;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: all 0.12s;
+    }
+    .ftab:hover { border-color: #3b82f6; color: #e2e8f0; }
+    .ftab.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+
+    .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #334155; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th {
+      background: #1e293b;
+      color: #94a3b8;
+      font-weight: 600;
+      text-align: left;
+      padding: 0.65rem 1rem;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+    td { padding: 0.65rem 1rem; border-top: 1px solid #1e293b; color: #cbd5e1; vertical-align: middle; }
+    tr:hover td { background: rgba(30,41,59,0.5); }
+
+    .mark { font-weight: 600; color: #f1f5f9; font-variant-numeric: tabular-nums; }
+    .badge-pr {
+      background: rgba(245,158,11,0.15);
+      color: #f59e0b;
+      border: 1px solid rgba(245,158,11,0.3);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      margin-left: 0.4rem;
+    }
+    .badge-relay {
+      background: rgba(139,92,246,0.15);
+      color: #a78bfa;
+      border: 1px solid rgba(139,92,246,0.3);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      margin-left: 0.4rem;
+    }
+    .p1 { color: #f59e0b; font-weight: 700; }
+    .p2 { color: #94a3b8; font-weight: 600; }
+    .p3 { color: #b45309; font-weight: 600; }
+
+    .divider { border: none; border-top: 1px solid #1e293b; margin: 2rem 0; }
+    .empty { text-align: center; color: #475569; padding: 2.5rem 1rem; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>🏃 Kids Running</h1>
+  <span class="sync-meta" id="sync-meta">Loading…</span>
+  <button class="btn-sync" id="sync-btn" onclick="syncNow()">Sync from SportTrax</button>
+</div>
+
+<div class="content" id="content">
+  <div class="empty">Loading results…</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ebdsxcbpnhevzkbpdxry.supabase.co'
+const SUPABASE_ANON_KEY = 'sb_publishable_2chleZ28vhYAQqpW0RaNeg_0DYo_1v4'
+const SYNC_URL = `${SUPABASE_URL}/functions/v1/sync-sporttrax`
+
+const { createClient } = supabase
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+const FILTERS = ['All', '100m', '200m', '400m', 'Relay']
+const activeFilter = {}
+
+async function load() {
+  const { data: athletes } = await db.from('kids_athletes').select('*').order('name')
+  const { data: results } = await db.from('kids_results').select('*').order('race_date', { ascending: false })
+
+  const content = document.getElementById('content')
+
+  if (!athletes?.length) {
+    content.innerHTML = '<div class="empty">No data yet — click <strong>Sync from SportTrax</strong> to load results.</div>'
+    document.getElementById('sync-meta').textContent = 'No data yet'
+    return
+  }
+
+  const byAthlete = {}
+  for (const a of athletes) byAthlete[a.id] = { ...a, results: [] }
+  for (const r of results ?? []) {
+    if (byAthlete[r.athlete_id]) byAthlete[r.athlete_id].results.push(r)
+  }
+
+  content.innerHTML = ''
+  const list = Object.values(byAthlete)
+  list.forEach((a, i) => {
+    content.appendChild(buildBlock(a))
+    if (i < list.length - 1) {
+      const hr = document.createElement('hr')
+      hr.className = 'divider'
+      content.appendChild(hr)
+    }
+  })
+
+  const total = (results ?? []).length
+  const newest = results?.[0]?.created_at
+  document.getElementById('sync-meta').textContent = newest
+    ? `${total} results · last synced ${new Date(newest).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    : `${total} results loaded`
+}
+
+function buildBlock(athlete) {
+  activeFilter[athlete.id] = activeFilter[athlete.id] || 'All'
+  const prCount = athlete.results.filter(r => r.is_pr).length
+
+  const block = document.createElement('div')
+  block.className = 'athlete-block'
+  block.innerHTML = `
+    <div class="athlete-heading">
+      <h2>${athlete.name}</h2>
+      ${prCount ? `<span class="badge-pr-count">⚡ ${prCount} PR${prCount !== 1 ? 's' : ''}</span>` : ''}
+      <span class="result-count">${athlete.results.length} result${athlete.results.length !== 1 ? 's' : ''}</span>
+    </div>
+    <div class="filter-tabs" id="tabs-${athlete.id}"></div>
+    <div id="tbl-${athlete.id}"></div>
+  `
+
+  const tabsEl = block.querySelector(`#tabs-${athlete.id}`)
+  FILTERS.forEach(f => {
+    const btn = document.createElement('button')
+    btn.className = 'ftab' + (f === activeFilter[athlete.id] ? ' active' : '')
+    btn.textContent = f
+    btn.onclick = () => {
+      activeFilter[athlete.id] = f
+      tabsEl.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'))
+      btn.classList.add('active')
+      renderTable(athlete, block.querySelector(`#tbl-${athlete.id}`))
+    }
+    tabsEl.appendChild(btn)
+  })
+
+  renderTable(athlete, block.querySelector(`#tbl-${athlete.id}`))
+  return block
+}
+
+function applyFilter(results, f) {
+  if (f === 'All') return results
+  if (f === 'Relay') return results.filter(r => r.is_relay)
+  return results.filter(r => !r.is_relay && r.event_name?.toLowerCase().includes(f.toLowerCase()))
+}
+
+function placeHtml(p) {
+  if (!p) return '—'
+  const cls = p === 1 ? 'p1' : p === 2 ? 'p2' : p === 3 ? 'p3' : ''
+  const sfx = p === 1 ? 'st' : p === 2 ? 'nd' : p === 3 ? 'rd' : 'th'
+  return cls ? `<span class="${cls}">${p}${sfx}</span>` : `${p}${sfx}`
+}
+
+function fmtDate(d) {
+  if (!d) return '—'
+  return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function renderTable(athlete, container) {
+  const rows = applyFilter(athlete.results, activeFilter[athlete.id])
+  if (!rows.length) {
+    container.innerHTML = '<div class="empty">No results for this filter.</div>'
+    return
+  }
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Meet</th><th>Event</th><th>Mark</th><th>Place</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr>
+            <td>${fmtDate(r.race_date)}</td>
+            <td>${r.meet_name || '—'}</td>
+            <td>${r.event_name || '—'}${r.is_relay ? '<span class="badge-relay">RELAY</span>' : ''}</td>
+            <td><span class="mark">${r.mark || '—'}</span>${r.is_pr ? '<span class="badge-pr">PR</span>' : ''}</td>
+            <td>${placeHtml(r.place)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `
+}
+
+async function syncNow() {
+  const btn = document.getElementById('sync-btn')
+  const meta = document.getElementById('sync-meta')
+  btn.disabled = true
+  btn.textContent = 'Syncing…'
+  meta.textContent = 'Fetching from SportTrax…'
+  try {
+    const resp = await fetch(SYNC_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+    })
+    const json = await resp.json()
+    if (json.ok) {
+      meta.textContent = 'Sync complete — reloading…'
+      await load()
+    } else {
+      meta.textContent = 'Sync error — check console'
+      console.error(json)
+    }
+  } catch (e) {
+    meta.textContent = 'Sync failed: ' + e.message
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'Sync from SportTrax'
+  }
+}
+
+load()
+</script>
+</body>
+</html>
