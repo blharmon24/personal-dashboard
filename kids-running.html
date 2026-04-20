@@ -158,7 +158,7 @@
   <button class="btn-sync" id="sync-btn" onclick="syncNow()">Sync SportTrax</button>
   <button class="btn-sync" onclick="window.open('anet-sync.html','_blank')" style="background:#7c3aed">Sync Athletic.net</button>
   <button class="btn-sync" id="delete-btn" onclick="deleteAllResults()" style="background:#dc2626">Delete All Results</button>
-  <span style="font-size:0.72rem;color:#475569">v2026.04.18.23</span>
+  <span style="font-size:0.72rem;color:#475569">v2026.04.19.2</span>
 </div>
 
 <div class="content" id="content">
@@ -186,6 +186,23 @@ function parseTime(mark) {
     return parseFloat(min) * 60 + parseFloat(sec)
   }
   return parseFloat(mark)
+}
+
+// Calculate average mph from event name + mark string
+function calcMph(eventName, mark) {
+  if (!eventName || !mark) return null
+  const secs = parseTime(mark)
+  if (!secs) return null
+  let meters = null
+  const relayMatch = eventName.match(/4x(\d+)/i)
+  if (relayMatch) {
+    meters = 4 * parseInt(relayMatch[1])
+  } else {
+    const distMatch = eventName.match(/(\d+)\s*m/i)
+    if (distMatch) meters = parseInt(distMatch[1])
+  }
+  if (!meters) return null
+  return (meters / 1609.344 / secs) * 3600
 }
 
 // Format seconds back to "50.19" or "1:52.34"
@@ -347,7 +364,7 @@ function renderView(athlete, container) {
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>Date</th><th>Meet</th><th>Event</th><th>Mark</th><th>Place</th><th></th>
+          <th>Date</th><th>Meet</th><th>Event</th><th>Mark</th><th>Avg MPH</th><th>Place</th><th></th>
         </tr></thead>
         <tbody>
           ${rows.map(r => `<tr data-id="${r.id}">
@@ -355,6 +372,7 @@ function renderView(athlete, container) {
             <td>${r.meet_name || '—'}</td>
             <td>${r.event_name || '—'}${r.is_relay ? '<span class="badge-relay">RELAY</span>' : ''}</td>
             <td><span class="mark">${r.mark || '—'}</span>${r.is_pr ? '<span class="badge-pr">PR</span>' : ''}</td>
+            <td style="color:#94a3b8;font-variant-numeric:tabular-nums">${(() => { const mph = calcMph(r.event_name, r.mark); return mph ? mph.toFixed(1) : '—' })()}</td>
             <td>${placeHtml(r.place)}</td>
             <td><button class="btn-del-row" title="Delete this result" onclick="deleteResult(${r.id}, this)">✕</button></td>
           </tr>`).join('')}
