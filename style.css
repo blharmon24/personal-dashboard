@@ -7,24 +7,52 @@
 :root {
   --sidebar-width: 240px;
   --bg: #0f1117;
-  --sidebar-bg: #090b12;
+  --sidebar-bg: #1a1d27;
   --accent: #4f8ef7;
   --text: #e2e8f0;
   --text-muted: #64748b;
-  --border: #1a1d2e;
-  --hover: #111425;
+  --border: #2d3148;
+  --hover: #252840;
   --card-bg: #1a1d27;
 }
 
 [data-theme="light"] {
   --bg: #f0f2f5;
-  --sidebar-bg: #ffffff;
+  --sidebar-bg: #253447;
   --accent: #2563eb;
   --text: #1e293b;
   --text-muted: #64748b;
   --border: #e2e8f0;
   --hover: #f1f5f9;
   --card-bg: #ffffff;
+}
+
+[data-theme="light"] .sidebar {
+  border-right-color: #1e2f42;
+}
+[data-theme="light"] .sidebar-header {
+  border-bottom-color: #1e2f42;
+}
+[data-theme="light"] .sidebar-header h1 {
+  color: #7eb3f7;
+}
+[data-theme="light"] .nav-section-label {
+  color: #6a8099;
+}
+[data-theme="light"] .nav-links li a {
+  color: #bbc8d4;
+}
+[data-theme="light"] .nav-links li a:hover,
+[data-theme="light"] .nav-links li a.active {
+  background: #2e4057;
+  color: #ffffff;
+}
+[data-theme="light"] .sidebar-footer {
+  border-top-color: #1e2f42;
+}
+[data-theme="light"] .version,
+[data-theme="light"] .theme-toggle {
+  color: #6a8099;
 }
 
 body {
