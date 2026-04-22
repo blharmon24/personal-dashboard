@@ -1,3 +1,17 @@
+const themeToggle = document.getElementById('theme-toggle');
+const savedTheme = localStorage.getItem('theme') || 'dark';
+if (savedTheme === 'light') {
+  document.documentElement.dataset.theme = 'light';
+  themeToggle.textContent = '☀️';
+}
+themeToggle.addEventListener('click', () => {
+  const isLight = document.documentElement.dataset.theme === 'light';
+  const next = isLight ? 'dark' : 'light';
+  document.documentElement.dataset.theme = next === 'dark' ? '' : 'light';
+  themeToggle.textContent = next === 'light' ? '☀️' : '🌙';
+  localStorage.setItem('theme', next);
+});
+
 document.querySelectorAll('.nav-link[data-section]').forEach(link => {
   link.addEventListener('click', e => {
     e.preventDefault();

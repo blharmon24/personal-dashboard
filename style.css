@@ -16,6 +16,17 @@
   --card-bg: #1a1d27;
 }
 
+[data-theme="light"] {
+  --bg: #f0f2f5;
+  --sidebar-bg: #ffffff;
+  --accent: #2563eb;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --hover: #f1f5f9;
+  --card-bg: #ffffff;
+}
+
 body {
   display: flex;
   min-height: 100vh;
@@ -174,6 +185,24 @@ body {
   margin-top: auto;
   padding: 16px 20px;
   border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-muted);
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.theme-toggle:hover {
+  color: var(--accent);
 }
 
 .version {
