@@ -555,7 +555,7 @@
       </div>
 
       <div id="bottomControls">
-        <div class="field-label">Binding gutter (space between content and notes)</div>
+        <div class="field-label">Content gap (space between content and note lines)</div>
         <div class="slider-row">
           <input type="range" id="bottomGutterSlider" min="0" max="1" step="0.0625" value="0.375">
           <span class="slider-val" id="bottomGutterVal">0.375 in</span>
@@ -655,7 +655,7 @@
         <div class="ic-val" id="infoMargin">3.00 in / 216 pt</div>
       </div>
       <div class="info-cell">
-        <div class="ic-label">Binding gutter</div>
+        <div class="ic-label" id="infoGutterLabel">Binding gutter</div>
         <div class="ic-val" id="infoGutter">0.50 in / 36 pt</div>
       </div>
       <div class="info-cell">
@@ -820,14 +820,16 @@
     if (notesPosition === 'bottom') {
       const bottomGutter = parseFloat(document.getElementById('bottomGutterSlider').value);
       const topMargin    = parseFloat(document.getElementById('topMarginSlider').value);
-      document.getElementById('infoGutter').textContent    = bottomGutter.toFixed(2) + ' in / ' + Math.round(bottomGutter * 72) + ' pt';
+      document.getElementById('infoGutterLabel').textContent = 'Content gap';
+      document.getElementById('infoGutter').textContent      = bottomGutter.toFixed(2) + ' in / ' + Math.round(bottomGutter * 72) + ' pt';
       document.getElementById('infoNewSizeLabel').textContent = 'New page height';
-      document.getElementById('infoNewWidth').textContent  = (11 + topMargin + bottomGutter + margin).toFixed(2) + ' in (est.)';
+      document.getElementById('infoNewWidth').textContent    = (11 + topMargin + bottomGutter + margin).toFixed(2) + ' in (est.)';
     } else {
       const gutter = parseFloat(gutterSlider.value);
-      document.getElementById('infoGutter').textContent    = gutter.toFixed(2) + ' in / ' + Math.round(gutter * 72) + ' pt';
+      document.getElementById('infoGutterLabel').textContent = 'Binding gutter';
+      document.getElementById('infoGutter').textContent      = gutter.toFixed(2) + ' in / ' + Math.round(gutter * 72) + ' pt';
       document.getElementById('infoNewSizeLabel').textContent = 'New page width';
-      document.getElementById('infoNewWidth').textContent  = (8.5 + margin).toFixed(2) + ' in (est.)';
+      document.getElementById('infoNewWidth').textContent    = (8.5 + margin).toFixed(2) + ' in (est.)';
     }
     document.getElementById('infoOffset').textContent  = offset === 0 ? 'None' : offset + ' page' + (offset !== 1 ? 's' : '');
     document.getElementById('infoLines').textContent   = showLines ? 'Yes — ' + spacing + ' pt' : 'No — blank';
@@ -888,9 +890,15 @@
               </div>
               ${sidePx}
             </div>
-            <div style="height:${gutH}px; background:#fff; flex-shrink:0;"></div>
+            <div style="height:${gutH}px; background:#fff; flex-shrink:0; display:flex;">
+              ${sidePx}<div style="flex:1;"></div>${sidePx}
+            </div>
             <div style="height:1px; background:var(--border); flex-shrink:0;"></div>
-            <div style="flex:0 0 ${noteH}px; background:#fff; padding:3px ${notePadPx}px; overflow:hidden;">${noteLines}</div>
+            <div style="flex:0 0 ${noteH}px; background:#fff; padding:3px 0; overflow:hidden; display:flex;">
+              <div style="width:${sidePadPx}px; background:var(--bg); flex-shrink:0;"></div>
+              <div style="flex:1; padding:0 ${linePadPx}px; overflow:hidden;">${noteLines}</div>
+              <div style="width:${sidePadPx}px; background:var(--bg); flex-shrink:0;"></div>
+            </div>
           </div>
           <div class="page-label">All pages — bottom margin</div>
         </div>`;
