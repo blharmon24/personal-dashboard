@@ -74,6 +74,12 @@ GitHub Pages site at https://blharmon24.github.io (repo: blharmon24/personal-das
 ### GC Formatting Tool Architecture
 Bottom margin mode (default): `copyPages + setMediaBox/setCropBox` — preserves text rendering and uniform spacing. Side margin mode: `embedPages + drawPage` — causes rounding artifacts, non-uniform spacing (why bottom is default). GCDividerPage marker skips margin processing on session divider pages. Don't switch bottom mode to embedPages. Keep GCDividerPage check in place.
 
+**Styling:** Tool is styled to match the main dashboard dark theme (Segoe UI font, same CSS variable palette). Has its own `#theme-toggle` button in the header — same `localStorage` key `'theme'` as the dashboard so theme preference is shared across pages.
+
+**Terminology:** Bottom mode calls the gap between content and note lines "Content gap" (not "Binding gutter" — that would imply spine/binding, which is wrong). Side mode correctly uses "Binding gutter" for the spine-side margin. The info panel labels are dynamic: `id="infoGutterLabel"` switches between "Content gap" / "Binding gutter" and `id="infoNewSizeLabel"` switches between "New page height" / "New page width" depending on `notesPosition`.
+
+**Bottom mode preview:** `scaleH = totalH / totalInches`, `scaleW = pageW / totalW`. Side margin strips use `var(--bg)`. Line spacing uses `Math.max(4, Math.round(spacing * scaleH / 72))`. Side strips appear in all four vertical sections (top, content, gap, note area) — distinct from note line side padding which only insets the ruled lines within the note area.
+
 ### UI Preferences
 Use sliders (`<input type="range">`) with live value readout (`<span class="slider-val">`) for all numeric settings with a natural min/max. Tools open in new tab (`target="_blank"`) — never iframe or inline panel.
 
@@ -98,3 +104,13 @@ File: `kids-running.html`. Tracks Luke and Tanner Harmon's race results. Supabas
 **supabase-js version:** Must stay on v2 (`@supabase/supabase-js@2`). v3 UMD bundle exposes a different global — causes "supabase is not defined" crash. The `sb_publishable_...` anon key format works fine with v2 despite a harmless payload warning in the client internals.
 
 **Delete All Results:** Password-protected button in header. Password: `DeleteTrackResultsHarmon`. Uses anon Supabase client — works because RLS delete policy allows anon.
+
+### Token Efficiency Preference
+Don't burn tokens on exploratory web fetches for simple UI/style tasks. When Brian asks for a visual change (e.g. "make the sidebar darker"), just make the change directly rather than fetching external pages to analyze them. If the request is ambiguous, ask one clarifying question instead of fetching. Brian interrupted a multi-fetch session and redirected to a simpler ask.
+
+### Light/Dark Mode Toggle
+Added in April 2026. Toggle button (`#theme-toggle`) shows 🌙/☀️. Applies `data-theme="light"` to `<html>`. Preference persisted in `localStorage` key `'theme'`. Both the main dashboard and `general-conference-formatting.html` share this key — switching on one carries over to the other.
+
+**Main dashboard (`index.html` / `style.css`):** Toggle is in the sidebar footer. Light mode sidebar is `#253447` (dark blue-gray) with separate CSS overrides under `[data-theme="light"] .sidebar` etc. to keep sidebar text readable.
+
+**GC formatting tool (`general-conference-formatting.html`):** Toggle is in the page header (right-aligned, `margin-left:auto`). Light mode uses dashboard palette exactly: `--bg:#f0f2f5`, `--surface:#ffffff`, `--accent:#2563eb`, `--text:#1e293b`. Dark mode default: `--bg:#0f1117`, `--accent:#4f8ef7`.
