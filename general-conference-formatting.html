@@ -625,7 +625,7 @@
 
         <div class="field-label">Line color</div>
         <div class="color-row">
-          <input type="color" id="lineColorPicker" value="#c8c2b8">
+          <input type="color" id="lineColorPicker" value="#000000">
           <div class="color-presets" id="colorPresets"></div>
         </div>
       </div>
@@ -659,7 +659,7 @@
         <div class="ic-val" id="infoGutter">0.50 in / 36 pt</div>
       </div>
       <div class="info-cell">
-        <div class="ic-label">New page width</div>
+        <div class="ic-label" id="infoNewSizeLabel">New page width</div>
         <div class="ic-val" id="infoNewWidth">11.5 in (est.)</div>
       </div>
       <div class="info-cell">
@@ -673,8 +673,8 @@
       <div class="info-cell">
         <div class="ic-label">Line color</div>
         <div class="ic-val" style="display:flex; align-items:center; gap:8px;">
-          <span id="infoColorSwatch" style="display:inline-block; width:16px; height:16px; border-radius:3px; border:1px solid var(--border-strong); background:#c8c2b8; flex-shrink:0;"></span>
-          <span id="infoColorHex">#c8c2b8</span>
+          <span id="infoColorSwatch" style="display:inline-block; width:16px; height:16px; border-radius:3px; border:1px solid var(--border-strong); background:#000000; flex-shrink:0;"></span>
+          <span id="infoColorHex">#000000</span>
         </div>
       </div>
     </div>
@@ -747,7 +747,7 @@
   dropZone.addEventListener('click', e => { if (!e.target.classList.contains('browse-btn')) fileInput.click(); });
   fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
 
-  marginSlider.addEventListener('input', () => { marginVal.textContent = parseFloat(marginSlider.value).toFixed(3) + ' in'; updateInfo(); updatePreview(); });
+  marginSlider.addEventListener('input', () => { marginVal.textContent = parseFloat(marginSlider.value).toFixed(2) + ' in'; updateInfo(); updatePreview(); });
   gutterSlider.addEventListener('input', () => { gutterVal.textContent = parseFloat(gutterSlider.value).toFixed(2) + ' in'; updateInfo(); updatePreview(); });
   document.getElementById('bottomGutterSlider').addEventListener('input', function() { document.getElementById('bottomGutterVal').textContent = parseFloat(this.value).toFixed(3) + ' in'; updateInfo(); updatePreview(); });
   document.getElementById('topMarginSlider').addEventListener('input', function() { document.getElementById('topMarginVal').textContent = parseFloat(this.value).toFixed(3) + ' in'; updateInfo(); updatePreview(); });
@@ -791,6 +791,7 @@
     document.querySelectorAll('#scaleToggle button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     updateInfo();
+    updatePreview();
   }
 
   function setLines(val, btn) {
@@ -812,13 +813,22 @@
 
   function updateInfo() {
     const margin  = parseFloat(marginSlider.value);
-    const gutter  = parseFloat(gutterSlider.value);
     const spacing = parseInt(lineSpacingSlider.value);
     const offset  = parseInt(pageOffsetInput.value) || 0;
     const hex     = lineColorPicker.value;
-    document.getElementById('infoMargin').textContent  = margin.toFixed(2) + ' in / ' + Math.round(margin * 72) + ' pt';
-    document.getElementById('infoGutter').textContent  = gutter.toFixed(2) + ' in / ' + Math.round(gutter * 72) + ' pt';
-    document.getElementById('infoNewWidth').textContent = (8.5 + margin).toFixed(2) + ' in (est.)';
+    document.getElementById('infoMargin').textContent = margin.toFixed(2) + ' in / ' + Math.round(margin * 72) + ' pt';
+    if (notesPosition === 'bottom') {
+      const bottomGutter = parseFloat(document.getElementById('bottomGutterSlider').value);
+      const topMargin    = parseFloat(document.getElementById('topMarginSlider').value);
+      document.getElementById('infoGutter').textContent    = bottomGutter.toFixed(2) + ' in / ' + Math.round(bottomGutter * 72) + ' pt';
+      document.getElementById('infoNewSizeLabel').textContent = 'New page height';
+      document.getElementById('infoNewWidth').textContent  = (11 + topMargin + bottomGutter + margin).toFixed(2) + ' in (est.)';
+    } else {
+      const gutter = parseFloat(gutterSlider.value);
+      document.getElementById('infoGutter').textContent    = gutter.toFixed(2) + ' in / ' + Math.round(gutter * 72) + ' pt';
+      document.getElementById('infoNewSizeLabel').textContent = 'New page width';
+      document.getElementById('infoNewWidth').textContent  = (8.5 + margin).toFixed(2) + ' in (est.)';
+    }
     document.getElementById('infoOffset').textContent  = offset === 0 ? 'None' : offset + ' page' + (offset !== 1 ? 's' : '');
     document.getElementById('infoLines').textContent   = showLines ? 'Yes — ' + spacing + ' pt' : 'No — blank';
     document.getElementById('infoColorSwatch').style.background = hex;
@@ -829,22 +839,31 @@
     const container = document.getElementById('spreadPreview');
 
     if (notesPosition === 'bottom') {
-      const margin      = parseFloat(marginSlider.value);
+      const margin       = parseFloat(marginSlider.value);
       const bottomGutter = parseFloat(document.getElementById('bottomGutterSlider').value);
-      const topMargin   = parseFloat(document.getElementById('topMarginSlider').value);
-      const lineColor   = lineColorPicker.value;
-      const spacing     = parseInt(lineSpacingSlider.value);
-      const srcH        = 11; // inches (assumed)
-      const totalInches = topMargin + srcH + bottomGutter + margin;
-      const pageW  = 140;
-      const totalH = 230;
-      const scale  = totalH / totalInches;
-      const topH   = Math.round(topMargin * scale);
-      const contH  = Math.round(srcH * scale);
-      const gutH   = Math.round(bottomGutter * scale);
-      const noteH  = Math.round(margin * scale);
-      const lh     = Math.round((spacing / 36) * 16);
-      const lCount = Math.floor((noteH - 6) / lh);
+      const topMargin    = parseFloat(document.getElementById('topMarginSlider').value);
+      const sidePad      = parseFloat(document.getElementById('sidePadSlider').value);
+      const linePad      = parseFloat(document.getElementById('linePadSlider').value);
+      const lineColor    = lineColorPicker.value;
+      const spacing      = parseInt(lineSpacingSlider.value);
+      const srcH         = 11;
+      const srcW         = 8.5;
+      const totalInches  = topMargin + srcH + bottomGutter + margin;
+      const totalW       = srcW + 2 * sidePad;
+      const pageW        = 140;
+      const totalH       = 230;
+      const scaleH       = totalH / totalInches;
+      const scaleW       = pageW / totalW;
+      const topH         = Math.round(topMargin * scaleH);
+      const contH        = Math.round(srcH * scaleH);
+      const gutH         = Math.round(bottomGutter * scaleH);
+      const noteH        = Math.round(margin * scaleH);
+      const sidePadPx    = Math.round(sidePad * scaleW);
+      const linePadPx    = Math.round(linePad * scaleW);
+      const notePadPx    = sidePadPx + linePadPx;
+      const lh           = Math.max(4, Math.round(spacing * scaleH / 72));
+      const lCount       = Math.floor((noteH - 6) / lh);
+      const sidePx       = sidePadPx > 0 ? `<div style="width:${sidePadPx}px; background:var(--bg); flex-shrink:0;"></div>` : '';
       let noteLines = '';
       if (showLines) {
         for (let i = 0; i < lCount; i++) {
@@ -854,18 +873,24 @@
       container.innerHTML = `
         <div class="page-wrap">
           <div class="page-mock" style="width:${pageW}px; height:${totalH}px; display:flex; flex-direction:column; background:#fff;">
-            <div style="height:${topH}px; background:#fff; flex-shrink:0;"></div>
-            <div style="flex:0 0 ${contH}px; background:#f8f7f4; display:flex; flex-direction:column; padding:8px 6px; gap:4px; overflow:hidden;">
-              <div class="mock-line head"></div>
-              <div class="mock-line med"></div>
-              <div class="mock-line"></div>
-              <div class="mock-line short"></div>
-              <div class="mock-line"></div>
-              <div class="mock-line med"></div>
+            <div style="height:${topH}px; background:#fff; flex-shrink:0; display:flex;">
+              ${sidePx}<div style="flex:1;"></div>${sidePx}
+            </div>
+            <div style="flex:0 0 ${contH}px; background:#fff; display:flex; flex-shrink:0; overflow:hidden;">
+              ${sidePx}
+              <div style="flex:1; background:#f8f7f4; display:flex; flex-direction:column; padding:8px 6px; gap:4px; overflow:hidden;">
+                <div class="mock-line head"></div>
+                <div class="mock-line med"></div>
+                <div class="mock-line"></div>
+                <div class="mock-line short"></div>
+                <div class="mock-line"></div>
+                <div class="mock-line med"></div>
+              </div>
+              ${sidePx}
             </div>
             <div style="height:${gutH}px; background:#fff; flex-shrink:0;"></div>
             <div style="height:1px; background:var(--border); flex-shrink:0;"></div>
-            <div style="flex:0 0 ${noteH}px; background:#fff; padding:3px 6px; overflow:hidden;">${noteLines}</div>
+            <div style="flex:0 0 ${noteH}px; background:#fff; padding:3px ${notePadPx}px; overflow:hidden;">${noteLines}</div>
           </div>
           <div class="page-label">All pages — bottom margin</div>
         </div>`;
@@ -883,7 +908,8 @@
     const gutterW = Math.round(pageW * (gutter / totalWidth));
     const origW   = pageW - noteW;
     const spacing   = parseInt(lineSpacingSlider.value);
-    const lineCount = Math.floor((pageH - 20) / (spacing * 0.6));
+    const lhSide    = Math.max(4, Math.round(spacing * pageH / (11 * 72)));
+    const lineCount = Math.floor((pageH - 20) / lhSide);
 
     function makePage(side, labelText) {
       const noteOnLeft  = side === 'left';
@@ -893,9 +919,8 @@
       const contentW    = origW - gutterW;
       let noteInner = '';
       if (showLines) {
-        const lh = Math.round((spacing / 36) * 18);
         for (let i = 0; i < lineCount; i++) {
-          noteInner += `<hr class="note-rule" style="margin-top:${lh}px; border-bottom-color:${lineColor}80;">`;
+          noteInner += `<hr class="note-rule" style="margin-top:${lhSide}px; border-bottom-color:${lineColor}80;">`;
         }
       }
       const offsetNote = offset > 0
