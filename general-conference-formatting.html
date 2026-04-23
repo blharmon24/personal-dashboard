@@ -46,6 +46,23 @@
       --danger: #ef4444;
     }
 
+    [data-theme="light"] {
+      --bg: #f0f2f5;
+      --surface: #ffffff;
+      --surface2: #f1f5f9;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --text-faint: #94a3b8;
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
+      --accent-mid: #3b82f6;
+      --danger: #dc2626;
+    }
+
+    [data-theme="light"] .process-btn:hover:not(:disabled) { background: #1d4ed8; }
+
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
       background: var(--bg);
@@ -59,10 +76,25 @@
       border-bottom: 1px solid var(--border);
       padding: 1.25rem 2rem;
       display: flex;
-      align-items: baseline;
+      align-items: center;
       gap: 1rem;
       background: var(--surface);
     }
+
+    #theme-toggle {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      color: var(--text-muted);
+      padding: 0;
+      line-height: 1;
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+
+    #theme-toggle:hover { color: var(--accent); }
 
     header h1 {
       font-family: 'IBM Plex Mono', monospace;
@@ -517,6 +549,7 @@
 <header>
   <h1>PDF Note Margin Tool</h1>
   <span>// add writing space for printed books</span>
+  <button id="theme-toggle" title="Toggle light/dark mode">🌙</button>
 </header>
 
 <main>
@@ -1122,6 +1155,20 @@
 
   updatePreview();
   updateInfo();
+
+  const themeToggle = document.getElementById('theme-toggle');
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  if (savedTheme === 'light') {
+    document.documentElement.dataset.theme = 'light';
+    themeToggle.textContent = '☀️';
+  }
+  themeToggle.addEventListener('click', () => {
+    const isLight = document.documentElement.dataset.theme === 'light';
+    const next = isLight ? 'dark' : 'light';
+    document.documentElement.dataset.theme = next === 'dark' ? '' : 'light';
+    themeToggle.textContent = next === 'light' ? '☀️' : '🌙';
+    localStorage.setItem('theme', next);
+  });
 </script>
 </body>
 </html>
