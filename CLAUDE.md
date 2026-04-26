@@ -114,3 +114,30 @@ Added in April 2026. Toggle button (`#theme-toggle`) shows 🌙/☀️. Applies 
 **Main dashboard (`index.html` / `style.css`):** Toggle is in the sidebar footer. Light mode sidebar is `#253447` (dark blue-gray) with separate CSS overrides under `[data-theme="light"] .sidebar` etc. to keep sidebar text readable.
 
 **GC formatting tool (`general-conference-formatting.html`):** Toggle is in the page header (right-aligned, `margin-left:auto`). Light mode uses dashboard palette exactly: `--bg:#f0f2f5`, `--surface:#ffffff`, `--accent:#2563eb`, `--text:#1e293b`. Dark mode default: `--bg:#0f1117`, `--accent:#4f8ef7`.
+
+### Salary Tracker
+File: `salary-tracker.html`. Sidebar nav entry under "My Projects" (💼 icon). Tracks Brian's salary history and future projections from his school district job.
+
+**Key facts:**
+- District start date: May 28, 2002
+- Current base salary (2025–26 year): $131,444
+- Salary year runs July 1 – June 30. `CUR_YR = 2025` means the year starting July 1, 2025.
+- Paid 2× per month (24 paychecks/year)
+- Table rows span 2002–2040
+
+**Sick leave bonus tiers** (applied to base salary):
+- 936 hrs = +1%, 1352 hrs = +2%, 1768 hrs = +3%, 2184 hrs = +4%
+
+**Milestone badges** auto-appear in the Year column:
+- 25 YRS badge: salary year 2027–28 (yrsAt(2027) = 25)
+- RETIRE badge: salary year 2032–33 (yrsAt(2032) = 30)
+
+**Supabase storage:** Table `salary_rows` on `ebdsxcbpnhevzkbpdxry.supabase.co`. Schema: `salary_year` (integer, unique), `base_salary`, `cola_pct`, `sl_hours`, `pl_hours`. RLS: anon select/insert/update allowed. Uses supabase-js v2 CDN. Anon key: `sb_publishable_2chleZ28vhYAQqpW0RaNeg_0DYo_1v4`. Data upserted on each field change (no localStorage).
+
+**Future projections (Session 2 — complete):** COLA defaults to 3% for future years. Future rows tagged PROJ. Base salary auto-fills from previous year's base × (1 + COLA%). If `D[yr].base` is null → auto-compute; non-null → manual override. Clearing a manual override (empty input) resets to auto. Auto-computed base inputs styled italic/muted (`auto-val` class).
+
+**25-year milestone bonus:** Starting salary year 2027 (yrs >= 25), an extra +2% is added on top of COLA each year going forward. Effective raise = COLA + 2%. A `+2%` badge appears in the COLA column for those years. Logic in `buildComputedBases()`: `milestoneBonus = yrsAt(yr) >= 25 ? 2 : 0`.
+
+**Planned sessions still to build:**
+- Session 3: Charts — base salary vs salary+bonus vs projected retirement on a single chart
+- Session 4: Retirement calculator — top-3-year average, 2%/year multiplier, retirement date projections

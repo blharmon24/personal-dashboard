@@ -121,6 +121,8 @@
   .badge-proj { background: var(--accent); color: #fff; }
   .tier-0 { color: var(--text-muted); }
   .tier-1, .tier-2, .tier-3, .tier-4 { color: var(--positive); font-weight: 600; }
+  input.auto-val { font-style: italic; color: var(--text-muted); }
+  .cola-cell { display: flex; align-items: center; gap: 4px; }
   #loading {
     padding: 40px 20px;
     text-align: center;
@@ -186,6 +188,28 @@ function slTier(h) {
   return 0;
 }
 
+function buildComputedBases() {
+  const out = {};
+  for (let yr = FIRST; yr <= LAST; yr++) {
+    const r = D[yr] || {};
+    if (r.base != null) {
+      out[yr] = parseFloat(r.base);
+    } else if (yr > CUR_YR) {
+      const prev = out[yr - 1] || 0;
+      if (prev > 0) {
+        const cola = r.cola != null ? parseFloat(r.cola) : DEFAULT_COLA;
+        const milestoneBonus = yrsAt(yr) >= 25 ? 2 : 0;
+        out[yr] = prev * (1 + (cola + milestoneBonus) / 100);
+      } else {
+        out[yr] = 0;
+      }
+    } else {
+      out[yr] = 0;
+    }
+  }
+  return out;
+}
+
 function dollar(n) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -234,6 +258,7 @@ async function upsertRow(yr) {
 }
 
 function render() {
+  const bases = buildComputedBases();
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
   let prevTotal = null;
@@ -243,7 +268,8 @@ function render() {
     const fut  = yr > CUR_YR;
     const cur  = yr === CUR_YR;
     const yrs  = yrsAt(yr);
-    const base = parseFloat(r.base) || 0;
+    const base = bases[yr];
+    const isAutoBase = fut && (r.base == null) && base > 0;
     const cola = r.cola != null ? parseFloat(r.cola) : (fut ? DEFAULT_COLA : '');
     const slh  = parseFloat(r.slh) || 0;
     const plh  = parseFloat(r.plh) || 0;
@@ -254,6 +280,7 @@ function render() {
     const [mCell, yCell] = changeCells(diff);
     if (total > 0) prevTotal = total;
 
+    const has25Bonus = fut && yrs >= 25;
     const is25 = yrs >= 25 && yrsAt(yr - 1) < 25;
     const is30 = yrs >= 30 && yrsAt(yr - 1) < 30;
 
@@ -262,14 +289,19 @@ function render() {
     if (is30) yearHtml += '<span class="badge badge-warn">RETIRE</span>';
     if (fut)  yearHtml += '<span class="badge badge-proj">PROJ</span>';
 
+    const baseInputClass = `f-base${isAutoBase ? ' auto-val' : ''}`;
+    const baseVal = base > 0 ? Math.round(base) : '';
+
+    const colaInner = `<input type="number" class="f-cola" data-yr="${yr}" value="${cola !== '' ? cola : ''}" placeholder="${fut ? DEFAULT_COLA : ''}" step="0.1">${has25Bonus ? '<span class="badge badge-warn" title="25-year milestone bonus">+2%</span>' : ''}`;
+
     const tr = document.createElement('tr');
     tr.className = cur ? 'row-current' : fut ? 'row-future' : '';
     tr.dataset.yr = yr;
     tr.innerHTML = `
       <td>${yearHtml}</td>
       <td>${yrs}</td>
-      <td><input type="number" class="f-base" data-yr="${yr}" value="${base || ''}"></td>
-      <td><input type="number" class="f-cola" data-yr="${yr}" value="${cola !== '' ? cola : ''}" placeholder="${fut ? DEFAULT_COLA : ''}" step="0.1"></td>
+      <td><input type="number" class="${baseInputClass}" data-yr="${yr}" value="${baseVal}"></td>
+      <td><div class="cola-cell">${colaInner}</div></td>
       <td><input type="number" class="f-slh"  data-yr="${yr}" value="${slh || ''}"></td>
       <td class="tier-${tier}">${tier > 0 ? tier + '%' : '<span class="c-dim">—</span>'}</td>
       <td>${total > 0 ? dollar(total) : '<span class="c-dim">—</span>'}</td>
