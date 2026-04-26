@@ -160,3 +160,58 @@ File: `salary-tracker.html`. Sidebar nav entry under "My Projects" (💼 icon). 
 **Chart retirement zone shading:** Custom Chart.js inline plugin (`id: 'retireShade'`) in the `plugins` array of the Chart config (not `options.plugins`). Uses `beforeDatasetsDraw` to draw a green fill (`rgba(74,222,128,0.07)`) from 2032 to the right edge, plus a green dashed vertical line at 2032. Finds 2032 by searching `chart.data.labels.indexOf('2032–33')` — this works correctly at any zoom level. If `chartWindow.start > 2032` and the label isn't found, shades the entire chart area.
 
 **Chart range selector:** Three preset buttons above the chart in `.chart-controls`. State stored in `let chartWindow = { start: FIRST, end: LAST }`. Buttons: "Full Career" (all years), "Last 5 + Next 10" (`CUR_YR-5` to `CUR_YR+10`), "Last 2 + Next 10" (`CUR_YR-2` to `CUR_YR+10`). Clicking a button updates `chartWindow` and calls `renderChart(buildComputedBases())` directly (not full `render()` — avoids rebuilding the table). The totals pre-computation loop always covers FIRST→LAST so retirement income is accurate at any zoom level; only the visible labels loop uses `chartWindow`.
+
+### Property Management
+For Brian's parents who manage 12–15 rental properties. Files: `property-management.html` (main list/dashboard), `property-detail.html` (individual property — tabs). Sidebar entry in `index.html`: 🏠 Property Management (opens new tab). Current version: **v2026.04.26.22** — bump both `index.html` and both pm HTML files on every push.
+
+**Supabase project:** `https://ebdsxcbpnhevzkbpdxry.supabase.co` (same project as salary tracker and kids running). Same anon key: `sb_publishable_2chleZ28vhYAQqpW0RaNeg_0DYo_1v4`. Uses supabase-js v2 CDN. Auth: email/password via `signInWithPassword()`. Session persists in localStorage. All pm_* tables restricted to `authenticated` role via RLS.
+
+**Table schemas:**
+- `pm_properties`: `id` (uuid PK), `address`, `city`, `state`, `zip`, `notes`, `photo_url`, `created_at`
+- `pm_tenants`: `id`, `property_id` (FK→pm_properties), `first_name`, `last_name`, `email`, `phone`, `move_in_date` (date), `monthly_rent` (numeric), `notes`, `is_active` (bool, default true), `created_at`
+- `pm_payments`: `id`, `property_id` (FK), `amount` (numeric), `payment_date` (date), `for_month` (date — always stored as first of month e.g. "2026-04-01"), `method` (text), `notes`, `created_at`
+- `pm_expenses`: `id`, `property_id` (FK), `amount` (numeric), `expense_date` (date), `category` (text), `description`, `notes`, `receipt_url` (text — user pastes Google Drive/Photos share link), `created_at`
+- `pm_lease_docs`: `id`, `property_id` (FK), `file_path` (path in pm-leases bucket), `file_name`, `label`, `notes`, `uploaded_at`
+
+**Storage buckets:**
+- `pm-photos` — Public bucket. Property photos uploaded as `{propId}/photo.{ext}`, overwritten on update (`upsert:true`). Public URL stored in `pm_properties.photo_url`.
+- `pm-leases` — Private bucket. Lease PDFs stored as `{propId}/{timestamp}_{filename}`. Viewed via 1-hour signed URLs (`createSignedUrl`). Path stored in `pm_lease_docs.file_path`.
+
+**Card status logic** (determines border color on property cards and hero badge):
+- `vacant` — no active tenant
+- `paid` — total payments for current month ≥ monthly_rent
+- `partial` — some payment made but < rent due, day < 5
+- `current` — no payment yet, day < 5
+- `warn` — not paid in full, day 5 or 6 (yellow border)
+- `late` — not paid in full, day ≥ 7 (red border)
+- Rent is due on the 1st of the month (may change — ask Brian if this ever needs to be configurable)
+
+**Payment methods:** Cash, Check, Venmo, Zelle, Money Order, Bank Transfer, Other
+
+**Expense categories:** Maintenance & Repair, Utilities, Insurance, Property Tax, HOA Fees, Landscaping, Cleaning, Management Fee, Capital Improvement, Legal / Accounting, Other
+
+**Receipt links:** `receipt_url` column on `pm_expenses`. Free-text URL field in the Add Expense modal — user pastes a Google Drive or Google Photos share link. Shown as a 📎 icon in the expense table row that opens the link in a new tab. No Google API involved.
+
+**property-management.html architecture:**
+- Login overlay (full-screen, hides on auth)
+- Sticky header: back arrow → index.html, title, version, user email, Sign Out, theme toggle
+- Stats bar: Properties count, Collected This Month, Outstanding (red if >0), MTD Expenses, Current Tenants (First initial + Last name, sorted)
+- Property card grid: photo, address, city/state + tenant name, rent/mo, status badge, amount paid this month. Cards link to `property-detail.html?id={prop.id}`
+- Add Property modal: address (required), city, state, zip, photo upload, notes
+
+**property-detail.html architecture:**
+- Sticky header: breadcrumb (← Properties / Address), property switcher dropdown (navigates on change), version, Sign Out, theme toggle
+- Hero: property photo (280px) + info panel (address, city/state/zip, tenant name + status badge, contact details, this month collected, action buttons)
+- Tabs: Overview | Payments | Expenses | Documents
+- **Overview tab:** Property Info card (editable) + Tenant card (add/edit/deactivate)
+- **Payments tab:** Stats row (this month collected, rent due, outstanding, period total) + period filter dropdown + payments table (date, for_month, method badge, notes, amount, delete). Add Payment button.
+- **Expenses tab:** Period filter + expenses table (date, category badge, description, notes, amount, 📎 receipt link, delete). Add Expense button.
+- **Documents tab:** List of uploaded PDFs with View (signed URL) and delete. Upload Document button.
+
+**Modals:** Edit Property (with photo replace), Add/Edit Tenant (with Deactivate button when editing), Record Payment (amount, date, for_month via `<input type="month">`, method, notes), Add Expense (amount, date, category, description, notes, receipt link), Upload Document (PDF file, label, notes).
+
+**Tenant management:** Only one active tenant per property at a time (`is_active = true`). Deactivating sets `is_active = false` — historical records kept. Adding a new tenant after deactivation is supported.
+
+**Theme:** Shared `localStorage` key `'theme'` — same dark/light palette as the rest of the dashboard. Both pm pages have their own `#theme-toggle` button in the header.
+
+**⚠ PENDING — Before showing the app to Brian's parents:** Create Supabase Auth accounts. Go to Supabase dashboard → Authentication → Users → Add user → enter email + password. Need one account for parents (shared), one for Brian. Neither has been created yet.
