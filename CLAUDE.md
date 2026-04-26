@@ -139,5 +139,6 @@ File: `salary-tracker.html`. Sidebar nav entry under "My Projects" (💼 icon). 
 **25-year milestone bonus:** Starting salary year 2027 (yrs >= 25), an extra +2% is added on top of COLA each year going forward. Effective raise = COLA + 2%. A `+2%` badge appears in the COLA column for those years. Logic in `buildComputedBases()`: `milestoneBonus = yrsAt(yr) >= 25 ? 2 : 0`.
 
 **Planned sessions still to build:**
-- Session 3: Charts — base salary vs salary+bonus vs projected retirement on a single chart
 - Session 4: Retirement calculator — top-3-year average, 2%/year multiplier, retirement date projections
+
+**Session 3 (complete) — Chart:** Uses Chart.js (CDN). Three lines: Base Salary (blue), Salary + SL Bonus (green), Projected Retirement Income (yellow dashed). Chart placed above the table in `#chart-section`. `renderChart(bases)` called from `render()`. Theme toggle calls `render()` to rebuild chart with correct colors (canvas can't use CSS vars — `themeColors()` returns actual hex values for current theme). Retirement income line = avg(top-3 highest salary+bonus totals earned to date) × 2% × yrs of service at that year.
