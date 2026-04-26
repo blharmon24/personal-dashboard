@@ -219,7 +219,7 @@
 <header>
   <h1>Salary Tracker</h1>
   <span id="status"></span>
-  <span class="version">v2026.04.26.15</span>
+  <span class="version">v2026.04.26.16</span>
   <button id="theme-toggle">🌙</button>
 </header>
 
@@ -662,7 +662,8 @@ function scrollToCurrentYear() {
   const ts = document.querySelector('.table-scroll');
   const tr = document.querySelector(`tr[data-yr="${CUR_YR}"]`);
   if (!ts || !tr) return;
-  ts.scrollTop = tr.getBoundingClientRect().top - ts.getBoundingClientRect().top + ts.scrollTop;
+  const theadHeight = (ts.querySelector('thead') || {}).offsetHeight || 0;
+  ts.scrollTop = tr.getBoundingClientRect().top - ts.getBoundingClientRect().top + ts.scrollTop - theadHeight;
 }
 
 // Init
