@@ -32,13 +32,17 @@
     --warn: #d97706;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
   body {
     font-family: 'Segoe UI', sans-serif;
     background: var(--bg);
     color: var(--text);
-    min-height: 100vh;
+    height: 100vh;
     font-size: 13px;
+    display: flex;
+    flex-direction: column;
   }
+  #page-body { flex: 1; overflow-y: auto; }
   header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -69,7 +73,7 @@
   #status.saving { color: var(--accent); }
   #status.error  { color: var(--negative); }
   .container { padding: 16px 20px; }
-  .table-scroll { overflow-x: auto; overflow-y: auto; height: calc(100vh - 41px); position: sticky; top: 41px; }
+  .table-scroll { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; min-width: 1060px; }
   thead th {
     background: var(--surface2);
@@ -221,6 +225,7 @@
   <button id="theme-toggle">🌙</button>
 </header>
 
+<div id="page-body">
 <div id="loading">Loading…</div>
 
 <div id="chart-section" style="display:none">
@@ -285,6 +290,7 @@
     <tbody id="tbody"></tbody>
   </table>
   </div>
+</div>
 </div>
 
 <script>
