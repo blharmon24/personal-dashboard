@@ -137,7 +137,7 @@ tr.past-tenant td{opacity:.65;}
   </div>
   <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;">Jump to:</span>
   <select class="prop-switcher" id="prop-switcher"></select>
-  <span class="version">v2026.04.26.24</span>
+  <span class="version">v2026.04.26.25</span>
   <button class="btn btn-secondary btn-sm" onclick="doLogout()">Sign Out</button>
   <button class="theme-btn" id="theme-toggle">🌙</button>
 </header>
@@ -247,6 +247,25 @@ tr.past-tenant td{opacity:.65;}
   <div class="history-section">
     <div class="history-section-title">All Payments</div>
     <div id="history-payments-wrap"></div>
+  </div>
+</div>
+
+<!-- MODAL: MARK AS SOLD -->
+<div class="modal-overlay hidden" id="modal-sell">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      <h3>Mark Property as Sold</h3>
+      <button class="modal-close" onclick="closeModal('modal-sell')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">The property will be hidden from the active list. All data (payments, expenses, tenant history) is preserved.</p>
+    <div class="form-group"><label>Sale Date *</label><input type="date" id="sell-date"></div>
+    <div class="form-group"><label>Notes</label><input type="text" id="sell-notes" placeholder="e.g. Sold to buyer, closing price"></div>
+    <div id="sell-tenant-warn" style="font-size:12px;color:var(--warn);margin-bottom:12px;display:none;">⚠ Active tenant will also be ended on this date.</div>
+    <div class="modal-error" id="sell-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-sell')">Cancel</button>
+      <button class="btn btn-danger" id="sell-btn" onclick="confirmSell()">Mark as Sold</button>
+    </div>
   </div>
 </div>
 
@@ -600,6 +619,20 @@ function renderHero() {
 
   document.getElementById('hero-address').textContent = prop.address;
   document.getElementById('hero-city').textContent = [prop.city, prop.state, prop.zip].filter(Boolean).join(', ');
+  if (prop.is_sold) {
+    document.getElementById('hero-status-badge').innerHTML = '<span class="status-badge" style="background:var(--surface2);color:var(--text-muted);">SOLD</span>';
+    const lines = [];
+    if (prop.sold_date) lines.push(`Sold: ${fmtDate(prop.sold_date)}`);
+    if (prop.sold_notes) lines.push(prop.sold_notes);
+    document.getElementById('hero-tenant-name').textContent = '';
+    document.getElementById('hero-details').innerHTML = lines.join('<br>') || 'This property has been sold.';
+    document.getElementById('hero-actions').innerHTML = `
+      <button class="btn btn-secondary btn-sm" onclick="openEditPropModal()">Edit Info</button>
+      <button class="btn btn-secondary btn-sm" onclick="reactivateProp()">Reactivate</button>
+    `;
+    return;
+  }
+
   document.getElementById('hero-status-badge').innerHTML = statusBadges[cardStatus()] || '';
 
   if (tenant) {
@@ -624,6 +657,7 @@ function renderHero() {
     <button class="btn btn-secondary btn-sm" onclick="openTenantModal()">${tenant ? 'Edit Tenant' : 'Add Tenant'}</button>
     ${tenant ? '<button class="btn btn-secondary btn-sm" onclick="openRentModal()">Update Rent</button>' : ''}
     ${tenant ? '<button class="btn btn-primary btn-sm" onclick="openPayModal()">Record Payment</button>' : ''}
+    <button class="btn btn-secondary btn-sm" onclick="openSellModal()" style="margin-left:auto;color:var(--text-muted);">Mark as Sold</button>
   `;
 }
 
@@ -1018,6 +1052,42 @@ async function confirmDeactivate() {
   await db.from('pm_tenants').update({ is_active: false, move_out_date: moveOut }).eq('id', tenant.id);
   btn.textContent = 'End Tenancy'; btn.disabled = false;
   closeModal('modal-deactivate');
+  await loadAll();
+}
+
+function openSellModal() {
+  document.getElementById('sell-date').value = curDateStr();
+  document.getElementById('sell-notes').value = '';
+  document.getElementById('sell-err').textContent = '';
+  document.getElementById('sell-tenant-warn').style.display = tenant ? '' : 'none';
+  document.getElementById('modal-sell').classList.remove('hidden');
+}
+
+async function confirmSell() {
+  const date  = document.getElementById('sell-date').value;
+  const errEl = document.getElementById('sell-err');
+  if (!date) { errEl.textContent = 'Sale date is required.'; return; }
+  const btn = document.getElementById('sell-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+
+  await db.from('pm_properties').update({
+    is_sold:    true,
+    sold_date:  date,
+    sold_notes: document.getElementById('sell-notes').value.trim() || null
+  }).eq('id', propId);
+
+  if (tenant) {
+    await db.from('pm_tenants').update({ is_active: false, move_out_date: date }).eq('id', tenant.id);
+  }
+
+  btn.textContent = 'Mark as Sold'; btn.disabled = false;
+  closeModal('modal-sell');
+  await loadAll();
+}
+
+async function reactivateProp() {
+  if (!confirm('Mark this property as active again?')) return;
+  await db.from('pm_properties').update({ is_sold: false, sold_date: null, sold_notes: null }).eq('id', propId);
   await loadAll();
 }
 
