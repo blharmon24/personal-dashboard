@@ -219,7 +219,7 @@
 <header>
   <h1>Salary Tracker</h1>
   <span id="status"></span>
-  <span class="version">v2026.04.26.16</span>
+  <span class="version">v2026.04.26.17</span>
   <button id="theme-toggle">🌙</button>
 </header>
 
@@ -594,12 +594,13 @@ function render() {
     let yearHtml = `${yr}–${String(yr + 1).slice(-2)}`;
     if (is25) yearHtml += '<span class="badge badge-warn">25 YRS</span>';
     if (is30) yearHtml += '<span class="badge badge-warn">RETIRE</span>';
+    if (has25Bonus) yearHtml += '<span class="badge badge-warn" title="Includes +2% milestone bonus">+2%</span>';
     if (fut)  yearHtml += '<span class="badge badge-proj">PROJ</span>';
 
     const baseInputClass = `f-base${isAutoBase ? ' auto-val' : ''}`;
     const baseVal = base > 0 ? Math.round(base) : '';
 
-    const colaInner = `<input type="number" class="f-cola" data-yr="${yr}" value="${cola !== '' ? cola : ''}" placeholder="${fut ? DEFAULT_COLA : ''}" step="0.1"><span class="badge badge-warn" title="25-year milestone bonus" ${has25Bonus ? '' : 'style="visibility:hidden"'}>+2%</span>`;
+    const colaInner = `<input type="number" class="f-cola" data-yr="${yr}" value="${cola !== '' ? cola : ''}" placeholder="${fut ? DEFAULT_COLA : ''}" step="0.1">`;
 
     const tr = document.createElement('tr');
     tr.className = cur ? 'row-current' : fut ? 'row-future' : '';
