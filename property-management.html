@@ -142,7 +142,7 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
   </a>
   <h1>Property Management</h1>
-  <span class="version">v2026.04.26.22</span>
+  <span class="version">v2026.04.26.23</span>
   <span class="header-user" id="header-user"></span>
   <button class="btn btn-secondary btn-sm" onclick="doLogout()">Sign Out</button>
   <button class="theme-btn" id="theme-toggle">🌙</button>
@@ -325,7 +325,8 @@ function paysFor(propId) { return monthPays.filter(p => p.property_id === propId
 
 function cardStatus(tenant, pays) {
   if (!tenant) return 'vacant';
-  const paid = pays.reduce((s,p) => s + parseFloat(p.amount||0), 0);
+  const rentPays = pays.filter(p => !p.payment_type || p.payment_type === 'Rent');
+  const paid = rentPays.reduce((s,p) => s + parseFloat(p.amount||0), 0);
   const due = parseFloat(tenant.monthly_rent||0);
   if (paid >= due && due > 0) return 'paid';
   const day = new Date().getDate();
@@ -337,7 +338,8 @@ function cardStatus(tenant, pays) {
 function renderStats() {
   const expected = allTenants.reduce((s,t) => s + parseFloat(t.monthly_rent||0), 0);
   const collected = monthPays.reduce((s,p) => s + parseFloat(p.amount||0), 0);
-  const outstanding = Math.max(0, expected - collected);
+  const rentCollected = monthPays.filter(p => !p.payment_type || p.payment_type === 'Rent').reduce((s,p) => s + parseFloat(p.amount||0), 0);
+  const outstanding = Math.max(0, expected - rentCollected);
   const expenses = monthExps.reduce((s,e) => s + parseFloat(e.amount||0), 0);
   const names = allTenants.map(t => `${t.first_name[0]}. ${t.last_name}`).sort().join('  ·  ');
   document.getElementById('s-props').textContent = allProps.length;

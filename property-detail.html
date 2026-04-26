@@ -21,7 +21,6 @@ body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);fo
 .btn-danger{background:var(--negative);color:#fff;}.btn-danger:hover{opacity:.88;}
 .btn-sm{padding:4px 12px;font-size:12px;}
 
-/* HEADER */
 header{background:var(--surface);border-bottom:1px solid var(--border);padding:9px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20;}
 .breadcrumb{display:flex;align-items:center;gap:6px;font-size:12px;flex:1;min-width:0;overflow:hidden;}
 .breadcrumb a{color:var(--text-muted);text-decoration:none;white-space:nowrap;flex-shrink:0;}.breadcrumb a:hover{color:var(--text);}
@@ -31,7 +30,6 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:9
 .theme-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:6px;cursor:pointer;font-size:13px;flex-shrink:0;}
 .version{font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;}
 
-/* HERO */
 .hero{display:grid;grid-template-columns:280px 1fr;background:var(--surface);border-bottom:1px solid var(--border);}
 @media(max-width:600px){.hero{grid-template-columns:1fr;}}
 .hero-photo{height:220px;overflow:hidden;background:var(--surface2);display:flex;align-items:center;justify-content:center;}
@@ -45,7 +43,6 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:9
 .hero-details{font-size:12px;color:var(--text-muted);line-height:1.9;}
 .hero-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
 
-/* STATUS BADGES */
 .status-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.05em;}
 .sb-paid{background:rgba(74,222,128,.15);color:var(--positive);}
 .sb-partial{background:rgba(251,191,36,.15);color:var(--warn);}
@@ -54,17 +51,21 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:9
 .sb-current{background:var(--surface2);color:var(--text-muted);}
 .sb-vacant{background:var(--surface2);color:var(--text-muted);}
 
-/* TABS */
+.pt-badge{display:inline-block;font-size:10px;font-weight:600;padding:1px 7px;border-radius:8px;}
+.pt-rent{background:var(--surface2);color:var(--text-muted);}
+.pt-latefee{background:rgba(248,113,113,.15);color:var(--negative);}
+.pt-deposit{background:rgba(79,142,247,.15);color:var(--accent);}
+.pt-other{background:var(--surface2);color:var(--text-muted);}
+
 .tabs-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;}
 .tab-btn{padding:11px 20px;font-size:13px;font-weight:500;color:var(--text-muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;font-family:inherit;transition:color .15s;}
 .tab-btn:hover{color:var(--text);}
 .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
-.tab-pane{padding:20px 24px;max-width:880px;}
+.tab-pane{padding:20px 24px;max-width:920px;}
 .tab-pane.hidden{display:none;}
 .tab-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .tab-toolbar h3{font-size:14px;font-weight:600;}
 
-/* CARDS */
 .info-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:16px;}
 .info-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .info-card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);}
@@ -73,19 +74,16 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:9
 .info-field label{display:block;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
 .info-field span{font-size:13px;display:block;}
 
-/* PAYMENT STATS */
 .pay-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
 .pay-stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;flex:1;min-width:120px;}
 .pay-stat-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
 .pay-stat-val{font-size:1.05rem;font-weight:700;}
 .c-pos{color:var(--positive);}.c-neg{color:var(--negative);}
 
-/* FILTER ROW */
 .filter-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
 .filter-row label{font-size:11px;color:var(--text-muted);}
 .filter-row select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;font-family:inherit;}
 
-/* TABLES */
 .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
 table{width:100%;border-collapse:collapse;}
 thead th{text-align:left;font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
@@ -100,7 +98,6 @@ tfoot td.r{text-align:right;}
 .badge{display:inline-block;font-size:10px;font-weight:600;padding:1px 7px;border-radius:8px;background:var(--surface2);color:var(--text-muted);}
 .del-btn{background:none;border:none;cursor:pointer;color:var(--negative);font-size:11px;opacity:.55;padding:2px 4px;}.del-btn:hover{opacity:1;}
 
-/* DOCUMENTS */
 .doc-list{display:flex;flex-direction:column;gap:10px;}
 .doc-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;align-items:center;gap:12px;}
 .doc-icon{font-size:20px;flex-shrink:0;}
@@ -109,7 +106,10 @@ tfoot td.r{text-align:right;}
 .doc-meta{font-size:11px;color:var(--text-muted);}
 .doc-actions{display:flex;gap:6px;flex-shrink:0;}
 
-/* MODALS */
+.history-section{margin-bottom:28px;}
+.history-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:10px;}
+tr.past-tenant td{opacity:.65;}
+
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;}
 .modal-overlay.hidden{display:none;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;}
@@ -124,6 +124,7 @@ tfoot td.r{text-align:right;}
 .photo-upload-area p{color:var(--text-muted);font-size:12px;margin-top:6px;}
 .photo-preview-img{width:100%;height:130px;object-fit:cover;border-radius:6px;display:none;}
 .empty{padding:32px;text-align:center;color:var(--text-muted);font-size:12px;}
+.form-hint{font-size:11px;color:var(--text-muted);margin-top:4px;}
 </style>
 </head>
 <body>
@@ -135,12 +136,11 @@ tfoot td.r{text-align:right;}
     <span class="bc-current" id="bc-address">Loading…</span>
   </div>
   <select class="prop-switcher" id="prop-switcher" title="Switch property"></select>
-  <span class="version">v2026.04.26.22</span>
+  <span class="version">v2026.04.26.23</span>
   <button class="btn btn-secondary btn-sm" onclick="doLogout()">Sign Out</button>
   <button class="theme-btn" id="theme-toggle">🌙</button>
 </header>
 
-<!-- HERO -->
 <div class="hero">
   <div class="hero-photo" id="hero-photo">
     <div class="no-photo-hero">
@@ -160,12 +160,12 @@ tfoot td.r{text-align:right;}
   </div>
 </div>
 
-<!-- TABS -->
 <div class="tabs-bar">
   <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">Overview</button>
   <button class="tab-btn" data-tab="payments" onclick="switchTab('payments')">Payments</button>
   <button class="tab-btn" data-tab="expenses" onclick="switchTab('expenses')">Expenses</button>
   <button class="tab-btn" data-tab="documents" onclick="switchTab('documents')">Documents</button>
+  <button class="tab-btn" data-tab="history" onclick="switchTab('history')">History</button>
 </div>
 
 <!-- TAB: OVERVIEW -->
@@ -221,9 +221,25 @@ tfoot td.r{text-align:right;}
 <div class="tab-pane hidden" id="tab-documents">
   <div class="tab-toolbar">
     <h3>Lease &amp; Documents</h3>
-    <button class="btn btn-primary btn-sm" onclick="openDocModal()">+ Upload Document</button>
+    <button class="btn btn-primary btn-sm" onclick="openDocModal()">+ Add Document</button>
   </div>
   <div id="doc-list-wrap"></div>
+</div>
+
+<!-- TAB: HISTORY -->
+<div class="tab-pane hidden" id="tab-history">
+  <div class="tab-toolbar" style="margin-bottom:20px;">
+    <h3>Property History</h3>
+    <button class="btn btn-secondary btn-sm" onclick="exportPaymentsCSV()">Export CSV</button>
+  </div>
+  <div class="history-section">
+    <div class="history-section-title">Tenant History</div>
+    <div id="history-tenants-wrap"></div>
+  </div>
+  <div class="history-section">
+    <div class="history-section-title">All Payments</div>
+    <div id="history-payments-wrap"></div>
+  </div>
 </div>
 
 <!-- MODAL: EDIT PROPERTY -->
@@ -280,6 +296,17 @@ tfoot td.r{text-align:right;}
       <div class="form-group"><label>Move-in Date</label><input type="date" id="t-movein"></div>
       <div class="form-group"><label>Monthly Rent ($)</label><input type="number" id="t-rent" step="0.01" min="0"></div>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Security Deposit ($)</label>
+        <input type="number" id="t-deposit" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <div class="form-group" id="t-prorated-wrap">
+        <label>Prorated First Month ($)</label>
+        <input type="number" id="t-prorated" step="0.01" min="0" placeholder="If partial move-in month">
+        <div class="form-hint">Auto-creates a Rent payment for move-in month</div>
+      </div>
+    </div>
     <div class="form-group"><label>Notes</label><textarea id="t-notes" rows="2" style="resize:vertical"></textarea></div>
     <div class="modal-error" id="t-err"></div>
     <div class="modal-footer-split">
@@ -288,6 +315,23 @@ tfoot td.r{text-align:right;}
         <button class="btn btn-secondary" onclick="closeModal('modal-tenant')">Cancel</button>
         <button class="btn btn-primary" id="t-save-btn" onclick="saveTenant()">Add Tenant</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: END TENANCY -->
+<div class="modal-overlay hidden" id="modal-deactivate">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      <h3 id="deactivate-title">End Tenancy</h3>
+      <button class="modal-close" onclick="closeModal('modal-deactivate')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">The tenant will be marked as moved out. All historical records are preserved.</p>
+    <div class="form-group"><label>Move-out Date *</label><input type="date" id="deactivate-date"></div>
+    <div class="modal-error" id="deactivate-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-deactivate')">Cancel</button>
+      <button class="btn btn-danger" id="deactivate-btn" onclick="confirmDeactivate()">End Tenancy</button>
     </div>
   </div>
 </div>
@@ -304,14 +348,26 @@ tfoot td.r{text-align:right;}
       <div class="form-group"><label>Payment Date *</label><input type="date" id="pay-date"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>For Month *</label><input type="month" id="pay-for-month"></div>
       <div class="form-group">
-        <label>Method</label>
-        <select id="pay-method">
-          <option>Cash</option><option>Check</option><option>Venmo</option>
-          <option>Zelle</option><option>Money Order</option><option>Bank Transfer</option><option>Other</option>
+        <label>Type</label>
+        <select id="pay-type" onchange="onPayTypeChange()">
+          <option>Rent</option>
+          <option>Late Fee</option>
+          <option>Security Deposit</option>
+          <option>Other</option>
         </select>
       </div>
+      <div class="form-group" id="pay-for-month-wrap">
+        <label>For Month *</label>
+        <input type="month" id="pay-for-month">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Method</label>
+      <select id="pay-method">
+        <option>Cash</option><option>Check</option><option>Venmo</option>
+        <option>Zelle</option><option>Money Order</option><option>Bank Transfer</option><option>Other</option>
+      </select>
     </div>
     <div class="form-group"><label>Notes</label><input type="text" id="pay-notes" placeholder="Check #, etc."></div>
     <div class="modal-error" id="pay-err"></div>
@@ -346,7 +402,10 @@ tfoot td.r{text-align:right;}
       <div class="form-group"><label>Description</label><input type="text" id="exp-desc" placeholder="Brief description"></div>
     </div>
     <div class="form-group"><label>Notes</label><input type="text" id="exp-notes"></div>
-    <div class="form-group"><label>Receipt Link</label><input type="url" id="exp-receipt" placeholder="Paste Google Drive or Photos share link"></div>
+    <div class="form-group">
+      <label>Receipt Link</label>
+      <input type="url" id="exp-receipt" placeholder="Paste Google Drive or Photos share link">
+    </div>
     <div class="modal-error" id="exp-err"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-exp')">Cancel</button>
@@ -355,23 +414,26 @@ tfoot td.r{text-align:right;}
   </div>
 </div>
 
-<!-- MODAL: UPLOAD DOCUMENT -->
+<!-- MODAL: ADD DOCUMENT (Google Drive link) -->
 <div class="modal-overlay hidden" id="modal-doc">
   <div class="modal">
     <div class="modal-header">
-      <h3>Upload Document</h3>
+      <h3>Add Document</h3>
       <button class="modal-close" onclick="closeModal('modal-doc')">✕</button>
     </div>
     <div class="form-group">
-      <label>PDF File *</label>
-      <input type="file" id="doc-file" accept=".pdf,application/pdf" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);">
+      <label>Google Drive Link *</label>
+      <input type="url" id="doc-url" placeholder="Paste Google Drive share link">
     </div>
-    <div class="form-group"><label>Label / Name</label><input type="text" id="doc-label" placeholder="e.g. Lease Agreement 2026"></div>
+    <div class="form-group">
+      <label>Label / Name *</label>
+      <input type="text" id="doc-label" placeholder="e.g. Lease Agreement 2026">
+    </div>
     <div class="form-group"><label>Notes</label><input type="text" id="doc-notes"></div>
     <div class="modal-error" id="doc-err"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-doc')">Cancel</button>
-      <button class="btn btn-primary" id="doc-save-btn" onclick="uploadDoc()">Upload</button>
+      <button class="btn btn-primary" id="doc-save-btn" onclick="saveDocLink()">Add Document</button>
     </div>
   </div>
 </div>
@@ -385,10 +447,9 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const propId = new URLSearchParams(location.search).get('id');
 if (!propId) location.href = 'property-management.html';
 
-let prop = null, tenant = null, payments = [], expenses = [], docs = [];
+let prop = null, tenant = null, allTenants = [], payments = [], expenses = [], docs = [];
 let currentTab = 'overview';
 
-// Theme
 const themeToggle = document.getElementById('theme-toggle');
 function applyTheme(t) {
   document.documentElement.dataset.theme = t === 'light' ? 'light' : '';
@@ -402,7 +463,6 @@ themeToggle.addEventListener('click', () => {
 
 async function doLogout() { await db.auth.signOut(); location.href = 'property-management.html'; }
 
-// Helpers
 function dollar(n) { return '$' + Number(n||0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
 function fmtDate(s) {
   if (!s) return '—';
@@ -419,15 +479,20 @@ function curDateStr() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function curMonthInput() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 function curMonthDate() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+  const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
 }
 
-// Init
+function isRentPay(p) { return !p.payment_type || p.payment_type === 'Rent'; }
+
+function ptBadge(type) {
+  const t = type || 'Rent';
+  const cls = { 'Rent':'pt-rent', 'Late Fee':'pt-latefee', 'Security Deposit':'pt-deposit', 'Other':'pt-other' };
+  return `<span class="pt-badge ${cls[t]||'pt-other'}">${t}</span>`;
+}
+
 (async () => {
   const { data: { session } } = await db.auth.getSession();
   if (!session) { location.href = 'property-management.html'; return; }
@@ -435,16 +500,15 @@ function curMonthDate() {
 })();
 
 async function loadAll() {
-  const [propsRes, propRes, tenRes, payRes, expRes, docRes] = await Promise.all([
+  const [propsRes, propRes, tenantsRes, payRes, expRes, docRes] = await Promise.all([
     db.from('pm_properties').select('id, address').order('address'),
     db.from('pm_properties').select('*').eq('id', propId).single(),
-    db.from('pm_tenants').select('*').eq('property_id', propId).eq('is_active', true).maybeSingle(),
+    db.from('pm_tenants').select('*').eq('property_id', propId).order('move_in_date', { ascending: true }),
     db.from('pm_payments').select('*').eq('property_id', propId).order('payment_date', { ascending: false }),
     db.from('pm_expenses').select('*').eq('property_id', propId).order('expense_date', { ascending: false }),
     db.from('pm_lease_docs').select('*').eq('property_id', propId).order('uploaded_at', { ascending: false })
   ]);
 
-  // Property switcher
   const allProps = propsRes.data || [];
   const sel = document.getElementById('prop-switcher');
   sel.innerHTML = allProps.map(p => `<option value="${p.id}" ${p.id === propId ? 'selected' : ''}>${p.address}</option>`).join('');
@@ -452,7 +516,8 @@ async function loadAll() {
 
   prop = propRes.data;
   if (!prop) { location.href = 'property-management.html'; return; }
-  tenant = tenRes.data || null;
+  allTenants = tenantsRes.data || [];
+  tenant = allTenants.find(t => t.is_active) || null;
   payments = payRes.data || [];
   expenses = expRes.data || [];
   docs = docRes.data || [];
@@ -467,12 +532,13 @@ async function loadAll() {
   if (currentTab === 'payments') renderPayments();
   else if (currentTab === 'expenses') renderExpenses();
   else if (currentTab === 'documents') renderDocuments();
+  else if (currentTab === 'history') renderHistory();
 }
 
 function cardStatus() {
   if (!tenant) return 'vacant';
   const ms = curMonthDate();
-  const paid = payments.filter(p => p.for_month === ms).reduce((s, p) => s + parseFloat(p.amount||0), 0);
+  const paid = payments.filter(p => p.for_month === ms && isRentPay(p)).reduce((s, p) => s + parseFloat(p.amount||0), 0);
   const due = parseFloat(tenant.monthly_rent||0);
   if (paid >= due && due > 0) return 'paid';
   const day = new Date().getDate();
@@ -498,20 +564,19 @@ function renderHero() {
 
   document.getElementById('hero-address').textContent = prop.address;
   document.getElementById('hero-city').textContent = [prop.city, prop.state, prop.zip].filter(Boolean).join(', ');
-
-  const status = cardStatus();
-  document.getElementById('hero-status-badge').innerHTML = statusBadges[status] || '';
+  document.getElementById('hero-status-badge').innerHTML = statusBadges[cardStatus()] || '';
 
   if (tenant) {
     document.getElementById('hero-tenant-name').textContent = `${tenant.first_name} ${tenant.last_name}`;
     const ms = curMonthDate();
-    const monthPaid = payments.filter(p => p.for_month === ms).reduce((s, p) => s + parseFloat(p.amount||0), 0);
+    const monthPaid = payments.filter(p => p.for_month === ms && isRentPay(p)).reduce((s, p) => s + parseFloat(p.amount||0), 0);
     const lines = [];
     if (tenant.monthly_rent) lines.push(`Rent: ${dollar(tenant.monthly_rent)}/mo`);
+    if (tenant.security_deposit) lines.push(`Deposit held: ${dollar(tenant.security_deposit)}`);
     if (tenant.email) lines.push(tenant.email);
     if (tenant.phone) lines.push(tenant.phone);
     if (tenant.move_in_date) lines.push(`Moved in: ${fmtDate(tenant.move_in_date)}`);
-    lines.push(`This month: ${dollar(monthPaid)} collected`);
+    lines.push(`This month: ${dollar(monthPaid)} rent collected`);
     document.getElementById('hero-details').innerHTML = lines.join('<br>');
   } else {
     document.getElementById('hero-tenant-name').textContent = 'Vacant';
@@ -542,6 +607,7 @@ function renderOverview() {
       <div class="info-field"><label>Email</label><span>${tenant.email || '—'}</span></div>
       <div class="info-field"><label>Phone</label><span>${tenant.phone || '—'}</span></div>
       <div class="info-field"><label>Move-in Date</label><span>${fmtDate(tenant.move_in_date)}</span></div>
+      <div class="info-field"><label>Security Deposit</label><span>${tenant.security_deposit ? dollar(tenant.security_deposit) : '—'}</span></div>
       ${tenant.notes ? `<div class="info-field" style="grid-column:1/-1"><label>Notes</label><span>${tenant.notes}</span></div>` : ''}
     </div>`;
   } else {
@@ -549,7 +615,6 @@ function renderOverview() {
   }
 }
 
-// TABS
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -557,11 +622,11 @@ function switchTab(tab) {
   if (tab === 'payments') renderPayments();
   else if (tab === 'expenses') renderExpenses();
   else if (tab === 'documents') renderDocuments();
+  else if (tab === 'history') renderHistory();
 }
 
-// PAYMENTS TAB
 function buildPayFilter() {
-  const months = [...new Set(payments.map(p => p.for_month))].sort().reverse();
+  const months = [...new Set(payments.map(p => p.for_month).filter(Boolean))].sort().reverse();
   const cur = curMonthDate();
   const sel = document.getElementById('pay-filter');
   sel.innerHTML = `<option value="all">All Time</option>` +
@@ -573,14 +638,14 @@ function renderPayments() {
   const filtered = filter === 'all' ? payments : payments.filter(p => p.for_month === filter);
 
   const ms = curMonthDate();
-  const monthPaid = payments.filter(p => p.for_month === ms).reduce((s, p) => s + parseFloat(p.amount||0), 0);
+  const monthRentPaid = payments.filter(p => p.for_month === ms && isRentPay(p)).reduce((s, p) => s + parseFloat(p.amount||0), 0);
   const due = tenant ? parseFloat(tenant.monthly_rent||0) : 0;
-  const outstanding = Math.max(0, due - monthPaid);
+  const outstanding = Math.max(0, due - monthRentPaid);
   const filteredTotal = filtered.reduce((s, p) => s + parseFloat(p.amount||0), 0);
   const allTotal = payments.reduce((s, p) => s + parseFloat(p.amount||0), 0);
 
   document.getElementById('pay-stats').innerHTML = `
-    <div class="pay-stat"><div class="pay-stat-label">This Month Collected</div><div class="pay-stat-val c-pos">${dollar(monthPaid)}</div></div>
+    <div class="pay-stat"><div class="pay-stat-label">This Month Rent</div><div class="pay-stat-val c-pos">${dollar(monthRentPaid)}</div></div>
     <div class="pay-stat"><div class="pay-stat-label">Rent Due</div><div class="pay-stat-val">${dollar(due)}</div></div>
     <div class="pay-stat"><div class="pay-stat-label">Outstanding</div><div class="pay-stat-val ${outstanding > 0 ? 'c-neg' : 'c-pos'}">${dollar(outstanding)}</div></div>
     <div class="pay-stat"><div class="pay-stat-label">${filter === 'all' ? 'All-time Total' : 'Period Total'}</div><div class="pay-stat-val">${dollar(filter === 'all' ? allTotal : filteredTotal)}</div></div>
@@ -589,20 +654,20 @@ function renderPayments() {
   const wrap = document.getElementById('pay-table-wrap');
   if (!filtered.length) { wrap.innerHTML = '<div class="empty">No payments recorded for this period.</div>'; return; }
   wrap.innerHTML = `<div class="table-wrap"><table>
-    <thead><tr><th>Date</th><th>For Month</th><th>Method</th><th>Notes</th><th class="r">Amount</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>For Month</th><th>Type</th><th>Method</th><th>Notes</th><th class="r">Amount</th><th></th></tr></thead>
     <tbody>${filtered.map(p => `<tr>
       <td>${fmtDate(p.payment_date)}</td>
-      <td>${fmtMonth(p.for_month)}</td>
+      <td>${p.for_month ? fmtMonth(p.for_month) : '—'}</td>
+      <td>${ptBadge(p.payment_type)}</td>
       <td><span class="badge">${p.method || '—'}</span></td>
       <td style="color:var(--text-muted)">${p.notes || ''}</td>
       <td class="r" style="font-weight:600">${dollar(p.amount)}</td>
       <td><button class="del-btn" onclick="deletePayment('${p.id}')" title="Delete">✕</button></td>
     </tr>`).join('')}</tbody>
-    <tfoot><tr><td colspan="4" style="color:var(--text-muted);font-weight:400">Total</td><td class="r">${dollar(filteredTotal)}</td><td></td></tr></tfoot>
+    <tfoot><tr><td colspan="5" style="color:var(--text-muted);font-weight:400">Total</td><td class="r">${dollar(filteredTotal)}</td><td></td></tr></tfoot>
   </table></div>`;
 }
 
-// EXPENSES TAB
 function buildExpFilter() {
   const months = [...new Set(expenses.map(e => e.expense_date.substring(0,7) + '-01'))].sort().reverse();
   const sel = document.getElementById('exp-filter');
@@ -634,33 +699,94 @@ function renderExpenses() {
   </table></div>`;
 }
 
-// DOCUMENTS TAB
 function renderDocuments() {
   const wrap = document.getElementById('doc-list-wrap');
-  if (!docs.length) { wrap.innerHTML = '<div class="empty">No documents uploaded yet.</div>'; return; }
+  if (!docs.length) { wrap.innerHTML = '<div class="empty">No documents added yet.</div>'; return; }
   wrap.innerHTML = `<div class="doc-list">${docs.map(d => `
     <div class="doc-item">
       <span class="doc-icon">📄</span>
       <div class="doc-info">
-        <div class="doc-name">${d.label || d.file_name}</div>
-        <div class="doc-meta">${d.file_name} · Uploaded ${fmtDate(d.uploaded_at)}</div>
+        <div class="doc-name">${d.label || d.file_name || 'Document'}</div>
+        <div class="doc-meta">Added ${fmtDate(d.uploaded_at)}</div>
         ${d.notes ? `<div class="doc-meta">${d.notes}</div>` : ''}
       </div>
       <div class="doc-actions">
-        <button class="btn btn-secondary btn-sm" onclick="viewDoc('${d.file_path}')">View</button>
-        <button class="del-btn" onclick="deleteDoc('${d.id}', '${d.file_path}')" title="Delete">✕</button>
+        <button class="btn btn-secondary btn-sm" onclick="viewDoc('${d.id}')">View</button>
+        <button class="del-btn" onclick="deleteDoc('${d.id}', '${d.file_path || ''}')" title="Delete">✕</button>
       </div>
     </div>
   `).join('')}</div>`;
 }
 
-async function viewDoc(filePath) {
-  const { data, error } = await db.storage.from('pm-leases').createSignedUrl(filePath, 3600);
-  if (error) { alert('Could not generate link: ' + error.message); return; }
-  window.open(data.signedUrl, '_blank');
+async function viewDoc(docId) {
+  const d = docs.find(x => x.id === docId);
+  if (!d) return;
+  if (d.doc_url) {
+    window.open(d.doc_url, '_blank');
+  } else if (d.file_path) {
+    const { data, error } = await db.storage.from('pm-leases').createSignedUrl(d.file_path, 3600);
+    if (error) { alert('Could not generate link: ' + error.message); return; }
+    window.open(data.signedUrl, '_blank');
+  }
 }
 
-// MODAL HELPERS
+function renderHistory() {
+  const tWrap = document.getElementById('history-tenants-wrap');
+  if (!allTenants.length) {
+    tWrap.innerHTML = '<div class="empty">No tenant history.</div>';
+  } else {
+    const sorted = [...allTenants].reverse();
+    tWrap.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Move-in</th><th>Move-out</th><th class="r">Monthly Rent</th><th class="r">Deposit Held</th><th>Status</th></tr></thead>
+      <tbody>${sorted.map(t => `<tr class="${t.is_active ? '' : 'past-tenant'}">
+        <td style="font-weight:600">${t.first_name} ${t.last_name}</td>
+        <td>${fmtDate(t.move_in_date)}</td>
+        <td>${t.move_out_date ? fmtDate(t.move_out_date) : t.is_active ? '<span style="color:var(--positive)">Current</span>' : '—'}</td>
+        <td class="r">${t.monthly_rent ? dollar(t.monthly_rent) : '—'}</td>
+        <td class="r">${t.security_deposit ? dollar(t.security_deposit) : '—'}</td>
+        <td>${t.is_active ? '<span class="status-badge sb-paid">ACTIVE</span>' : '<span class="status-badge sb-vacant">PAST</span>'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  }
+
+  const pWrap = document.getElementById('history-payments-wrap');
+  if (!payments.length) {
+    pWrap.innerHTML = '<div class="empty">No payment history.</div>';
+  } else {
+    const total = payments.reduce((s, p) => s + parseFloat(p.amount||0), 0);
+    pWrap.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>For Month</th><th>Type</th><th>Method</th><th>Notes</th><th class="r">Amount</th></tr></thead>
+      <tbody>${payments.map(p => `<tr>
+        <td>${fmtDate(p.payment_date)}</td>
+        <td>${p.for_month ? fmtMonth(p.for_month) : '—'}</td>
+        <td>${ptBadge(p.payment_type)}</td>
+        <td><span class="badge">${p.method || '—'}</span></td>
+        <td style="color:var(--text-muted)">${p.notes || ''}</td>
+        <td class="r" style="font-weight:600">${dollar(p.amount)}</td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="5" style="color:var(--text-muted);font-weight:400">All-time Total</td><td class="r">${dollar(total)}</td></tr></tfoot>
+    </table></div>`;
+  }
+}
+
+function exportPaymentsCSV() {
+  if (!payments.length) { alert('No payments to export.'); return; }
+  const rows = [['Date','For Month','Type','Method','Amount','Notes']];
+  payments.forEach(p => rows.push([
+    p.payment_date || '',
+    p.for_month ? p.for_month.substring(0,7) : '',
+    p.payment_type || 'Rent',
+    p.method || '',
+    p.amount || '',
+    (p.notes || '').replace(/"/g, "'")
+  ]));
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `${prop.address.replace(/[^a-z0-9]/gi,'_')}_payments.csv`;
+  a.click();
+}
+
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
 function previewPhoto(inputId, previewId, placeholderId) {
@@ -675,7 +801,6 @@ function previewPhoto(inputId, previewId, placeholderId) {
   reader.readAsDataURL(file);
 }
 
-// EDIT PROPERTY
 function openEditPropModal() {
   document.getElementById('ep-address').value = prop.address || '';
   document.getElementById('ep-city').value = prop.city || '';
@@ -727,23 +852,25 @@ async function saveProp() {
   await loadAll();
 }
 
-// TENANT MODAL
 let editingTenant = false;
 
 function openTenantModal() {
   editingTenant = !!tenant;
   document.getElementById('tenant-modal-title').textContent = editingTenant ? 'Edit Tenant' : 'Add Tenant';
   document.getElementById('t-save-btn').textContent = editingTenant ? 'Save Changes' : 'Add Tenant';
-  document.getElementById('t-first').value  = tenant?.first_name  || '';
-  document.getElementById('t-last').value   = tenant?.last_name   || '';
-  document.getElementById('t-email').value  = tenant?.email       || '';
-  document.getElementById('t-phone').value  = tenant?.phone       || '';
-  document.getElementById('t-movein').value = tenant?.move_in_date || '';
-  document.getElementById('t-rent').value   = tenant?.monthly_rent || '';
-  document.getElementById('t-notes').value  = tenant?.notes       || '';
+  document.getElementById('t-first').value   = tenant?.first_name       || '';
+  document.getElementById('t-last').value    = tenant?.last_name        || '';
+  document.getElementById('t-email').value   = tenant?.email            || '';
+  document.getElementById('t-phone').value   = tenant?.phone            || '';
+  document.getElementById('t-movein').value  = tenant?.move_in_date     || '';
+  document.getElementById('t-rent').value    = tenant?.monthly_rent     || '';
+  document.getElementById('t-deposit').value = tenant?.security_deposit || '';
+  document.getElementById('t-prorated').value = '';
+  document.getElementById('t-notes').value   = tenant?.notes            || '';
   document.getElementById('t-err').textContent = '';
+  document.getElementById('t-prorated-wrap').style.display = editingTenant ? 'none' : '';
   document.getElementById('t-deactivate-wrap').innerHTML = editingTenant
-    ? `<button class="btn btn-danger btn-sm" onclick="deactivateTenant()">Deactivate Tenant</button>` : '';
+    ? `<button class="btn btn-danger btn-sm" onclick="openDeactivateModal()">End Tenancy</button>` : '';
   document.getElementById('modal-tenant').classList.remove('hidden');
 }
 
@@ -756,14 +883,15 @@ async function saveTenant() {
   btn.textContent = 'Saving…'; btn.disabled = true; errEl.textContent = '';
 
   const data = {
-    property_id:  propId,
-    first_name:   first,
-    last_name:    last,
-    email:        document.getElementById('t-email').value.trim()  || null,
-    phone:        document.getElementById('t-phone').value.trim()  || null,
-    move_in_date: document.getElementById('t-movein').value        || null,
-    monthly_rent: document.getElementById('t-rent').value          || null,
-    notes:        document.getElementById('t-notes').value.trim()  || null,
+    property_id:      propId,
+    first_name:       first,
+    last_name:        last,
+    email:            document.getElementById('t-email').value.trim()   || null,
+    phone:            document.getElementById('t-phone').value.trim()   || null,
+    move_in_date:     document.getElementById('t-movein').value         || null,
+    monthly_rent:     document.getElementById('t-rent').value           || null,
+    security_deposit: document.getElementById('t-deposit').value        || null,
+    notes:            document.getElementById('t-notes').value.trim()   || null,
     is_active: true
   };
 
@@ -772,26 +900,62 @@ async function saveTenant() {
     : await db.from('pm_tenants').insert(data);
 
   if (error) { errEl.textContent = error.message; btn.textContent = editingTenant ? 'Save Changes' : 'Add Tenant'; btn.disabled = false; return; }
+
+  const prorated = parseFloat(document.getElementById('t-prorated').value);
+  if (!editingTenant && prorated > 0) {
+    const moveIn = document.getElementById('t-movein').value;
+    await db.from('pm_payments').insert({
+      property_id:  propId,
+      amount:       prorated,
+      payment_type: 'Rent',
+      payment_date: moveIn || curDateStr(),
+      for_month:    moveIn ? moveIn.substring(0,7) + '-01' : curMonthDate(),
+      method:       'Other',
+      notes:        'Prorated first month'
+    });
+  }
+
   btn.textContent = editingTenant ? 'Save Changes' : 'Add Tenant'; btn.disabled = false;
   closeModal('modal-tenant');
   await loadAll();
 }
 
-async function deactivateTenant() {
-  if (!confirm(`Mark ${tenant.first_name} ${tenant.last_name} as moved out?`)) return;
-  await db.from('pm_tenants').update({ is_active: false }).eq('id', tenant.id);
+function openDeactivateModal() {
   closeModal('modal-tenant');
+  document.getElementById('deactivate-title').textContent = `End Tenancy — ${tenant.first_name} ${tenant.last_name}`;
+  document.getElementById('deactivate-date').value = curDateStr();
+  document.getElementById('deactivate-err').textContent = '';
+  document.getElementById('modal-deactivate').classList.remove('hidden');
+}
+
+async function confirmDeactivate() {
+  const moveOut = document.getElementById('deactivate-date').value;
+  const errEl = document.getElementById('deactivate-err');
+  if (!moveOut) { errEl.textContent = 'Move-out date is required.'; return; }
+  const btn = document.getElementById('deactivate-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  await db.from('pm_tenants').update({ is_active: false, move_out_date: moveOut }).eq('id', tenant.id);
+  btn.textContent = 'End Tenancy'; btn.disabled = false;
+  closeModal('modal-deactivate');
   await loadAll();
 }
 
-// PAYMENT MODAL
+function onPayTypeChange() {
+  const type = document.getElementById('pay-type').value;
+  const wrap = document.getElementById('pay-for-month-wrap');
+  const lbl = wrap.querySelector('label');
+  lbl.textContent = type === 'Rent' ? 'For Month *' : 'For Month';
+}
+
 function openPayModal() {
   document.getElementById('pay-amount').value = '';
   document.getElementById('pay-date').value = curDateStr();
+  document.getElementById('pay-type').value = 'Rent';
   document.getElementById('pay-for-month').value = curMonthInput();
   document.getElementById('pay-method').value = 'Cash';
   document.getElementById('pay-notes').value = '';
   document.getElementById('pay-err').textContent = '';
+  onPayTypeChange();
   document.getElementById('modal-pay').classList.remove('hidden');
   setTimeout(() => document.getElementById('pay-amount').focus(), 50);
 }
@@ -800,10 +964,11 @@ async function savePayment() {
   const amount = document.getElementById('pay-amount').value;
   const date   = document.getElementById('pay-date').value;
   const mon    = document.getElementById('pay-for-month').value;
+  const type   = document.getElementById('pay-type').value;
   const errEl  = document.getElementById('pay-err');
   if (!amount || parseFloat(amount) <= 0) { errEl.textContent = 'Enter a valid amount.'; return; }
   if (!date) { errEl.textContent = 'Payment date is required.'; return; }
-  if (!mon)  { errEl.textContent = 'Select the month this payment is for.'; return; }
+  if (type === 'Rent' && !mon) { errEl.textContent = 'For Month is required for rent payments.'; return; }
   const btn = document.getElementById('pay-save-btn');
   btn.textContent = 'Saving…'; btn.disabled = true; errEl.textContent = '';
 
@@ -811,7 +976,8 @@ async function savePayment() {
     property_id:  propId,
     amount:       parseFloat(amount),
     payment_date: date,
-    for_month:    mon + '-01',
+    for_month:    mon ? mon + '-01' : null,
+    payment_type: type,
     method:       document.getElementById('pay-method').value,
     notes:        document.getElementById('pay-notes').value.trim() || null
   });
@@ -829,7 +995,6 @@ async function deletePayment(id) {
   renderPayments(); renderHero();
 }
 
-// EXPENSE MODAL
 function openExpModal() {
   document.getElementById('exp-amount').value = '';
   document.getElementById('exp-date').value = curDateStr();
@@ -874,44 +1039,41 @@ async function deleteExpense(id) {
   renderExpenses();
 }
 
-// DOCUMENT MODAL
 function openDocModal() {
-  document.getElementById('doc-file').value = '';
+  document.getElementById('doc-url').value = '';
   document.getElementById('doc-label').value = '';
   document.getElementById('doc-notes').value = '';
   document.getElementById('doc-err').textContent = '';
   document.getElementById('modal-doc').classList.remove('hidden');
+  setTimeout(() => document.getElementById('doc-url').focus(), 50);
 }
 
-async function uploadDoc() {
-  const fileInput = document.getElementById('doc-file');
+async function saveDocLink() {
+  const url   = document.getElementById('doc-url').value.trim();
+  const label = document.getElementById('doc-label').value.trim();
   const errEl = document.getElementById('doc-err');
-  if (!fileInput.files[0]) { errEl.textContent = 'Please select a file.'; return; }
-  const file = fileInput.files[0];
+  if (!url)   { errEl.textContent = 'Please enter a Google Drive link.'; return; }
+  if (!label) { errEl.textContent = 'Please enter a label for this document.'; return; }
   const btn = document.getElementById('doc-save-btn');
-  btn.textContent = 'Uploading…'; btn.disabled = true; errEl.textContent = '';
-
-  const filePath = `${propId}/${Date.now()}_${file.name}`;
-  const { error: upErr } = await db.storage.from('pm-leases').upload(filePath, file);
-  if (upErr) { errEl.textContent = upErr.message; btn.textContent = 'Upload'; btn.disabled = false; return; }
+  btn.textContent = 'Saving…'; btn.disabled = true; errEl.textContent = '';
 
   const { error } = await db.from('pm_lease_docs').insert({
     property_id: propId,
-    file_path:   filePath,
-    file_name:   file.name,
-    label:       document.getElementById('doc-label').value.trim() || null,
+    doc_url:     url,
+    file_name:   label,
+    label:       label,
     notes:       document.getElementById('doc-notes').value.trim() || null
   });
 
-  if (error) { errEl.textContent = error.message; btn.textContent = 'Upload'; btn.disabled = false; return; }
-  btn.textContent = 'Upload'; btn.disabled = false;
+  if (error) { errEl.textContent = error.message; btn.textContent = 'Add Document'; btn.disabled = false; return; }
+  btn.textContent = 'Add Document'; btn.disabled = false;
   closeModal('modal-doc');
   await loadAll();
 }
 
 async function deleteDoc(id, filePath) {
   if (!confirm('Delete this document?')) return;
-  await db.storage.from('pm-leases').remove([filePath]);
+  if (filePath) await db.storage.from('pm-leases').remove([filePath]);
   await db.from('pm_lease_docs').delete().eq('id', id);
   docs = docs.filter(d => d.id !== id);
   renderDocuments();
