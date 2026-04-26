@@ -32,17 +32,12 @@
     --warn: #d97706;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; overflow: hidden; }
   body {
     font-family: 'Segoe UI', sans-serif;
     background: var(--bg);
     color: var(--text);
-    height: 100vh;
     font-size: 13px;
-    display: flex;
-    flex-direction: column;
   }
-  #page-body { flex: 1; overflow-y: auto; }
   header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -73,7 +68,7 @@
   #status.saving { color: var(--accent); }
   #status.error  { color: var(--negative); }
   .container { padding: 16px 20px; }
-  .table-scroll { overflow-x: auto; }
+  .table-scroll { overflow-x: auto; overflow-y: auto; }
   table { border-collapse: collapse; width: 100%; min-width: 1060px; }
   thead th {
     background: var(--surface2);
@@ -225,7 +220,6 @@
   <button id="theme-toggle">🌙</button>
 </header>
 
-<div id="page-body">
 <div id="loading">Loading…</div>
 
 <div id="chart-section" style="display:none">
@@ -290,7 +284,6 @@
     <tbody id="tbody"></tbody>
   </table>
   </div>
-</div>
 </div>
 
 <script>
@@ -653,6 +646,15 @@ toggle.addEventListener('click', () => {
   render();
 });
 
+function sizeTableScroll() {
+  const ts = document.querySelector('.table-scroll');
+  if (!ts) return;
+  let absTop = 0, el = ts;
+  while (el) { absTop += el.offsetTop; el = el.offsetParent; }
+  ts.style.height = Math.max(200, window.innerHeight - absTop) + 'px';
+}
+window.addEventListener('resize', sizeTableScroll);
+
 // Init
 (async () => {
   await loadFromDB();
@@ -669,6 +671,7 @@ toggle.addEventListener('click', () => {
   document.getElementById('main').style.display           = 'block';
   buildRetireSelect();
   render();
+  sizeTableScroll();
   setStatus('');
 })();
 </script>
