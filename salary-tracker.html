@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salary Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232635;
+    --accent: #4f8ef7;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --border: #2d3250;
+    --positive: #4ade80;
+    --negative: #f87171;
+    --warn: #fbbf24;
+  }
+  [data-theme="light"] {
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #e8edf3;
+    --accent: #2563eb;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --border: #cbd5e1;
+    --positive: #16a34a;
+    --negative: #dc2626;
+    --warn: #d97706;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 13px;
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 { font-size: 1.1rem; font-weight: 600; flex: 1; }
+  #theme-toggle {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  #status {
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 80px;
+    text-align: right;
+  }
+  #status.saving { color: var(--accent); }
+  #status.error  { color: var(--negative); }
+  .container { padding: 16px 20px; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 1060px; }
+  thead th {
+    background: var(--surface2);
+    padding: 7px 8px;
+    text-align: right;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+    position: sticky;
+    top: 41px;
+  }
+  thead th:first-child, thead th:nth-child(2) { text-align: left; }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:hover { background: var(--surface); }
+  tbody tr.row-current { background: rgba(79, 142, 247, 0.07); }
+  tbody tr.row-future { color: var(--text-muted); }
+  td { padding: 4px 8px; text-align: right; white-space: nowrap; }
+  td:first-child, td:nth-child(2) { text-align: left; }
+  input[type=number] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 3px 5px;
+    border-radius: 4px;
+    text-align: right;
+    font-size: 12px;
+    font-family: inherit;
+    width: 82px;
+    -moz-appearance: textfield;
+  }
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input[type=number]:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  .row-future input[type=number] { color: var(--text-muted); }
+  .c-pos { color: var(--positive); }
+  .c-neg { color: var(--negative); }
+  .c-dim { color: var(--text-muted); }
+  .badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-left: 4px;
+    vertical-align: middle;
+    letter-spacing: 0.03em;
+  }
+  .badge-warn { background: var(--warn); color: #000; }
+  .badge-proj { background: var(--accent); color: #fff; }
+  .tier-0 { color: var(--text-muted); }
+  .tier-1, .tier-2, .tier-3, .tier-4 { color: var(--positive); font-weight: 600; }
+  #loading {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Salary Tracker</h1>
+  <span id="status"></span>
+  <button id="theme-toggle">🌙</button>
+</header>
+
+<div id="loading">Loading…</div>
+
+<div class="container" id="main" style="display:none">
+  <table>
+    <thead>
+      <tr>
+        <th>Salary Year</th>
+        <th>Yrs</th>
+        <th>Base Salary</th>
+        <th>COLA %</th>
+        <th>SL Hours</th>
+        <th>SL Bonus</th>
+        <th>Salary + Bonus</th>
+        <th>PL Hours</th>
+        <th>Paycheck</th>
+        <th>Monthly +/-</th>
+        <th>Yearly +/-</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script>
+const SUPABASE_URL      = 'https://ebdsxcbpnhevzkbpdxry.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_2chleZ28vhYAQqpW0RaNeg_0DYo_1v4';
+const { createClient }  = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const START       = new Date(2002, 4, 28);
+const CUR_YR      = 2025;
+const FIRST       = 2002;
+const LAST        = 2040;
+const DEFAULT_COLA = 3.0;
+const SEED_SALARY  = 131444;
+
+let D = {};
+
+function yrsAt(yr) {
+  return Math.floor((new Date(yr, 6, 1) - START) / (365.25 * 864e5));
+}
+
+function slTier(h) {
+  if (h >= 2184) return 4;
+  if (h >= 1768) return 3;
+  if (h >= 1352) return 2;
+  if (h >= 936)  return 1;
+  return 0;
+}
+
+function dollar(n) {
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function changeCells(n) {
+  if (n === null) return ['<span class="c-dim">—</span>', '<span class="c-dim">—</span>'];
+  const cls  = n > 0 ? 'c-pos' : n < 0 ? 'c-neg' : 'c-dim';
+  const sign = n > 0 ? '+' : '';
+  return [
+    `<span class="${cls}">${sign}${dollar(n / 12)}</span>`,
+    `<span class="${cls}">${sign}${dollar(n)}</span>`
+  ];
+}
+
+function setStatus(msg, cls = '') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = cls;
+}
+
+async function loadFromDB() {
+  const { data, error } = await db.from('salary_rows').select('*');
+  if (error) { console.error(error); return; }
+  for (const row of data) {
+    D[row.salary_year] = {
+      base: row.base_salary,
+      cola: row.cola_pct,
+      slh:  row.sl_hours,
+      plh:  row.pl_hours
+    };
+  }
+}
+
+async function upsertRow(yr) {
+  const r = D[yr] || {};
+  setStatus('Saving…', 'saving');
+  const { error } = await db.from('salary_rows').upsert({
+    salary_year:  yr,
+    base_salary:  r.base  ?? null,
+    cola_pct:     r.cola  ?? null,
+    sl_hours:     r.slh   ?? null,
+    pl_hours:     r.plh   ?? null
+  }, { onConflict: 'salary_year' });
+  if (error) { console.error(error); setStatus('Save failed', 'error'); }
+  else setStatus('Saved', '');
+}
+
+function render() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  let prevTotal = null;
+
+  for (let yr = FIRST; yr <= LAST; yr++) {
+    const r    = D[yr] || {};
+    const fut  = yr > CUR_YR;
+    const cur  = yr === CUR_YR;
+    const yrs  = yrsAt(yr);
+    const base = parseFloat(r.base) || 0;
+    const cola = r.cola != null ? parseFloat(r.cola) : (fut ? DEFAULT_COLA : '');
+    const slh  = parseFloat(r.slh) || 0;
+    const plh  = parseFloat(r.plh) || 0;
+    const tier = slTier(slh);
+    const total = base > 0 ? base * (1 + tier / 100) : 0;
+    const pay   = total > 0 ? total / 24 : 0;
+    const diff  = (total > 0 && prevTotal !== null) ? total - prevTotal : null;
+    const [mCell, yCell] = changeCells(diff);
+    if (total > 0) prevTotal = total;
+
+    const is25 = yrs >= 25 && yrsAt(yr - 1) < 25;
+    const is30 = yrs >= 30 && yrsAt(yr - 1) < 30;
+
+    let yearHtml = `${yr}–${String(yr + 1).slice(-2)}`;
+    if (is25) yearHtml += '<span class="badge badge-warn">25 YRS</span>';
+    if (is30) yearHtml += '<span class="badge badge-warn">RETIRE</span>';
+    if (fut)  yearHtml += '<span class="badge badge-proj">PROJ</span>';
+
+    const tr = document.createElement('tr');
+    tr.className = cur ? 'row-current' : fut ? 'row-future' : '';
+    tr.dataset.yr = yr;
+    tr.innerHTML = `
+      <td>${yearHtml}</td>
+      <td>${yrs}</td>
+      <td><input type="number" class="f-base" data-yr="${yr}" value="${base || ''}"></td>
+      <td><input type="number" class="f-cola" data-yr="${yr}" value="${cola !== '' ? cola : ''}" placeholder="${fut ? DEFAULT_COLA : ''}" step="0.1"></td>
+      <td><input type="number" class="f-slh"  data-yr="${yr}" value="${slh || ''}"></td>
+      <td class="tier-${tier}">${tier > 0 ? tier + '%' : '<span class="c-dim">—</span>'}</td>
+      <td>${total > 0 ? dollar(total) : '<span class="c-dim">—</span>'}</td>
+      <td><input type="number" class="f-plh"  data-yr="${yr}" value="${plh || ''}"></td>
+      <td>${pay > 0 ? dollar(pay) : '<span class="c-dim">—</span>'}</td>
+      <td>${mCell}</td>
+      <td>${yCell}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  tbody.querySelectorAll('input').forEach(inp => inp.addEventListener('change', onChange));
+}
+
+async function onChange(e) {
+  const inp = e.target;
+  const yr  = parseInt(inp.dataset.yr);
+  if (!D[yr]) D[yr] = {};
+  if (inp.classList.contains('f-base')) D[yr].base = parseFloat(inp.value) || null;
+  if (inp.classList.contains('f-cola')) D[yr].cola = inp.value !== '' ? parseFloat(inp.value) : null;
+  if (inp.classList.contains('f-slh'))  D[yr].slh  = parseFloat(inp.value) || null;
+  if (inp.classList.contains('f-plh'))  D[yr].plh  = parseFloat(inp.value) || null;
+  render();
+  await upsertRow(yr);
+}
+
+// Theme toggle (localStorage only — shared with dashboard)
+const toggle = document.getElementById('theme-toggle');
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t === 'light' ? 'light' : '';
+  toggle.textContent = t === 'light' ? '☀️' : '🌙';
+}
+applyTheme(localStorage.getItem('theme') || 'dark');
+toggle.addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+  localStorage.setItem('theme', next);
+  applyTheme(next);
+});
+
+// Init
+(async () => {
+  await loadFromDB();
+
+  // Seed current year if not in DB yet
+  if (!D[CUR_YR] || !D[CUR_YR].base) {
+    D[CUR_YR] = { base: SEED_SALARY, cola: null, slh: null, plh: null };
+    await upsertRow(CUR_YR);
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('main').style.display    = 'block';
+  render();
+  setStatus('');
+})();
+</script>
+</body>
+</html>
