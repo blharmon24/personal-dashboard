@@ -105,9 +105,10 @@
   input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
   input[type=number]:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
   .row-future input[type=number] { color: var(--text-muted); }
-  .c-pos { color: var(--positive); }
-  .c-neg { color: var(--negative); }
-  .c-dim { color: var(--text-muted); }
+  .c-pos  { color: var(--positive); }
+  .c-neg  { color: var(--negative); }
+  .c-dim  { color: var(--text-muted); }
+  .c-warn { color: var(--warn); }
   .badge {
     display: inline-block;
     font-size: 9px;
@@ -130,6 +131,79 @@
     padding: 16px 20px;
     height: 300px;
   }
+  .retire-wrap {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px 16px;
+  }
+  .retire-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  .retire-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .retire-year-pick {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .retire-year-pick select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .retire-stats {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    min-width: 130px;
+    flex: 1;
+  }
+  .stat-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 5px;
+  }
+  .stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .stat-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+  .retire-formula {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 10px;
+    font-style: italic;
+  }
   #loading {
     padding: 40px 20px;
     text-align: center;
@@ -150,6 +224,41 @@
 <div id="chart-section" style="display:none">
   <div class="chart-wrap">
     <canvas id="salaryChart"></canvas>
+  </div>
+</div>
+
+<div id="retire-section" style="display:none">
+  <div class="retire-wrap">
+    <div class="retire-header">
+      <span class="retire-title">Retirement Calculator</span>
+      <div class="retire-year-pick">
+        Retire in: <select id="retire-yr-select"></select>
+      </div>
+    </div>
+    <div class="retire-stats">
+      <div class="stat-card">
+        <div class="stat-label">Years of Service</div>
+        <div class="stat-value" id="r-yrs">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top-3 Avg Salary</div>
+        <div class="stat-value" id="r-top3">—</div>
+        <div class="stat-sub" id="r-top3-yrs">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Annual Retirement</div>
+        <div class="stat-value c-pos" id="r-annual">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Monthly Retirement</div>
+        <div class="stat-value" id="r-monthly">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">% of Final Salary</div>
+        <div class="stat-value" id="r-pct">—</div>
+      </div>
+    </div>
+    <div class="retire-formula">Formula: avg of top 3 salary years × 2% × years of service</div>
   </div>
 </div>
 
@@ -393,9 +502,64 @@ async function upsertRow(yr) {
   else setStatus('Saved', '');
 }
 
+function dollarShort(n) {
+  return '$' + Math.round(n).toLocaleString('en-US');
+}
+
+function buildRetireSelect() {
+  const sel = document.getElementById('retire-yr-select');
+  for (let yr = CUR_YR; yr <= LAST; yr++) {
+    const opt = document.createElement('option');
+    opt.value = yr;
+    opt.textContent = `${yr}–${String(yr + 1).slice(-2)}`;
+    if (yr === 2032) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener('change', () => updateRetireCalc(buildComputedBases()));
+}
+
+function updateRetireCalc(bases) {
+  const yr = parseInt(document.getElementById('retire-yr-select').value);
+  const yrs = yrsAt(yr);
+
+  // Collect salary+bonus totals for all years up to retirement
+  const earned = [];
+  for (let y = FIRST; y <= yr; y++) {
+    const base = bases[y] || 0;
+    if (base > 0) {
+      const slh = parseFloat((D[y] || {}).slh) || 0;
+      earned.push({ yr: y, total: base * (1 + slTier(slh) / 100) });
+    }
+  }
+  earned.sort((a, b) => b.total - a.total);
+  const top3 = earned.slice(0, 3);
+  const avg = top3.length ? top3.reduce((s, e) => s + e.total, 0) / top3.length : 0;
+  const annual = avg * 0.02 * yrs;
+  const monthly = annual / 12;
+
+  // % of final working salary
+  const finalBase = bases[yr] || 0;
+  const finalSlh = parseFloat((D[yr] || {}).slh) || 0;
+  const finalTotal = finalBase * (1 + slTier(finalSlh) / 100);
+  const pct = finalTotal > 0 ? (annual / finalTotal * 100) : 0;
+  const pctCls = pct >= 70 ? 'c-pos' : pct >= 50 ? 'c-warn' : 'c-neg';
+
+  const top3label = top3.map(e => `${e.yr}–${String(e.yr + 1).slice(-2)}`).join(', ');
+
+  document.getElementById('r-yrs').textContent      = yrs;
+  document.getElementById('r-top3').textContent     = avg > 0 ? dollarShort(avg) : '—';
+  document.getElementById('r-top3-yrs').textContent = top3label || '—';
+  document.getElementById('r-annual').textContent   = annual > 0 ? dollarShort(annual) : '—';
+  document.getElementById('r-monthly').textContent  = monthly > 0 ? dollarShort(monthly) : '—';
+  const pctEl = document.getElementById('r-pct');
+  pctEl.textContent = pct > 0 ? pct.toFixed(1) + '%' : '—';
+  pctEl.className = `stat-value ${pctCls}`;
+}
+
 function render() {
   const bases = buildComputedBases();
   renderChart(bases);
+  updateRetireCalc(bases);
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
   let prevTotal = null;
@@ -489,9 +653,11 @@ toggle.addEventListener('click', () => {
     await upsertRow(CUR_YR);
   }
 
-  document.getElementById('loading').style.display       = 'none';
-  document.getElementById('chart-section').style.display = 'block';
-  document.getElementById('main').style.display          = 'block';
+  document.getElementById('loading').style.display        = 'none';
+  document.getElementById('chart-section').style.display  = 'block';
+  document.getElementById('retire-section').style.display = 'block';
+  document.getElementById('main').style.display           = 'block';
+  buildRetireSelect();
   render();
   setStatus('');
 })();
