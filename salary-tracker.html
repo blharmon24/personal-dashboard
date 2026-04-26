@@ -656,6 +656,13 @@ function sizeTableScroll() {
 }
 window.addEventListener('resize', sizeTableScroll);
 
+function scrollToCurrentYear() {
+  const ts = document.querySelector('.table-scroll');
+  const tr = document.querySelector(`tr[data-yr="${CUR_YR}"]`);
+  if (!ts || !tr) return;
+  ts.scrollTop = tr.getBoundingClientRect().top - ts.getBoundingClientRect().top + ts.scrollTop;
+}
+
 // Init
 (async () => {
   await loadFromDB();
@@ -673,6 +680,7 @@ window.addEventListener('resize', sizeTableScroll);
   buildRetireSelect();
   render();
   sizeTableScroll();
+  scrollToCurrentYear();
   setStatus('');
 })();
 </script>
