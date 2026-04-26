@@ -127,7 +127,6 @@
   .tier-0 { color: var(--text-muted); }
   .tier-1, .tier-2, .tier-3, .tier-4 { color: var(--positive); font-weight: 600; }
   input.auto-val { font-style: italic; color: var(--text-muted); }
-  .cola-cell { display: flex; align-items: center; gap: 4px; }
   .chart-wrap {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -219,7 +218,7 @@
 <header>
   <h1>Salary Tracker</h1>
   <span id="status"></span>
-  <span class="version">v2026.04.26.17</span>
+  <span class="version">v2026.04.26.18</span>
   <button id="theme-toggle">🌙</button>
 </header>
 
@@ -609,7 +608,7 @@ function render() {
       <td>${yearHtml}</td>
       <td>${yrs}</td>
       <td><input type="number" class="${baseInputClass}" data-yr="${yr}" value="${baseVal}"></td>
-      <td><div class="cola-cell">${colaInner}</div></td>
+      <td>${colaInner}</td>
       <td><input type="number" class="f-slh"  data-yr="${yr}" value="${slh || ''}"></td>
       <td class="tier-${tier}">${tier > 0 ? tier + '%' : '<span class="c-dim">—</span>'}</td>
       <td>${total > 0 ? dollar(total) : '<span class="c-dim">—</span>'}</td>
