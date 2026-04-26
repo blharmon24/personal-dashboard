@@ -83,7 +83,7 @@
     top: 0;
     z-index: 2;
   }
-  thead th:first-child, thead th:nth-child(2), thead th:nth-child(4) { text-align: left; }
+  thead th:first-child, thead th:nth-child(2) { text-align: left; }
   tbody tr { border-bottom: 1px solid var(--border); }
   tbody tr:hover { background: var(--surface); }
   tbody tr.row-current { background: rgba(79, 142, 247, 0.18); }
@@ -126,7 +126,7 @@
   .tier-0 { color: var(--text-muted); }
   .tier-1, .tier-2, .tier-3, .tier-4 { color: var(--positive); font-weight: 600; }
   input.auto-val { font-style: italic; color: var(--text-muted); }
-  .cola-cell { display: flex; align-items: center; gap: 4px; }
+  .cola-cell { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
   .chart-wrap {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
