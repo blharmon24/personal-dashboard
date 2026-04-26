@@ -323,9 +323,12 @@ tr.past-tenant td{opacity:.65;}
       <input type="file" id="ep-photo" accept="image/*" style="display:none" onchange="previewPhoto('ep-photo','ep-photo-preview','ep-photo-placeholder')">
     </div>
     <div class="modal-error" id="ep-err"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('modal-edit-prop')">Cancel</button>
-      <button class="btn btn-primary" id="ep-save-btn" onclick="saveProp()">Save Changes</button>
+    <div class="modal-footer-split">
+      <button class="btn btn-danger btn-sm" onclick="closeModal('modal-edit-prop');openSellModal()">Mark as Sold</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-edit-prop')">Cancel</button>
+        <button class="btn btn-primary" id="ep-save-btn" onclick="saveProp()">Save Changes</button>
+      </div>
     </div>
   </div>
 </div>
@@ -657,7 +660,6 @@ function renderHero() {
     <button class="btn btn-secondary btn-sm" onclick="openTenantModal()">${tenant ? 'Edit Tenant' : 'Add Tenant'}</button>
     ${tenant ? '<button class="btn btn-secondary btn-sm" onclick="openRentModal()">Update Rent</button>' : ''}
     ${tenant ? '<button class="btn btn-primary btn-sm" onclick="openPayModal()">Record Payment</button>' : ''}
-    <button class="btn btn-secondary btn-sm" onclick="openSellModal()" style="margin-left:auto;color:var(--text-muted);">Mark as Sold</button>
   `;
 }
 
