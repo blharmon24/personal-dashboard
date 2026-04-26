@@ -218,7 +218,7 @@
 <header>
   <h1>Salary Tracker</h1>
   <span id="status"></span>
-  <span class="version">v2026.04.26.19</span>
+  <span class="version">v2026.04.26.20</span>
   <button id="theme-toggle">🌙</button>
 </header>
 
@@ -405,6 +405,24 @@ function renderChart(bases) {
   if (chartInstance) chartInstance.destroy();
   chartInstance = new Chart(ctx, {
     type: 'line',
+    plugins: [{
+      id: 'retireShade',
+      beforeDatasetsDraw(chart) {
+        const { ctx: cc, chartArea, scales } = chart;
+        const x = scales.x.getPixelForValue(2032 - FIRST);
+        cc.save();
+        cc.fillStyle = 'rgba(74, 222, 128, 0.07)';
+        cc.fillRect(x, chartArea.top, chartArea.right - x, chartArea.bottom - chartArea.top);
+        cc.strokeStyle = 'rgba(74, 222, 128, 0.5)';
+        cc.lineWidth = 1;
+        cc.setLineDash([4, 3]);
+        cc.beginPath();
+        cc.moveTo(x, chartArea.top);
+        cc.lineTo(x, chartArea.bottom);
+        cc.stroke();
+        cc.restore();
+      }
+    }],
     data: {
       labels,
       datasets: [
