@@ -137,7 +137,7 @@ tr.past-tenant td{opacity:.65;}
   </div>
   <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;">Jump to:</span>
   <select class="prop-switcher" id="prop-switcher"></select>
-  <span class="version">v2026.04.26.23</span>
+  <span class="version">v2026.04.26.24</span>
   <button class="btn btn-secondary btn-sm" onclick="doLogout()">Sign Out</button>
   <button class="theme-btn" id="theme-toggle">🌙</button>
 </header>
@@ -234,12 +234,45 @@ tr.past-tenant td{opacity:.65;}
     <button class="btn btn-secondary btn-sm" onclick="exportPaymentsCSV()">Export CSV</button>
   </div>
   <div class="history-section">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="history-section-title" style="margin-bottom:0;">Rent History</div>
+      <button class="btn btn-primary btn-sm" id="update-rent-btn" onclick="openRentModal()" style="display:none;">+ Update Rent</button>
+    </div>
+    <div id="history-rent-wrap"></div>
+  </div>
+  <div class="history-section">
     <div class="history-section-title">Tenant History</div>
     <div id="history-tenants-wrap"></div>
   </div>
   <div class="history-section">
     <div class="history-section-title">All Payments</div>
     <div id="history-payments-wrap"></div>
+  </div>
+</div>
+
+<!-- MODAL: UPDATE RENT -->
+<div class="modal-overlay hidden" id="modal-rent">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      <h3>Update Rent</h3>
+      <button class="modal-close" onclick="closeModal('modal-rent')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>New Monthly Rent ($) *</label>
+        <input type="number" id="rent-amount" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>Effective Date *</label>
+        <input type="date" id="rent-date">
+      </div>
+    </div>
+    <div class="form-group"><label>Notes</label><input type="text" id="rent-notes" placeholder="e.g. Annual renewal, New lease"></div>
+    <div class="modal-error" id="rent-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-rent')">Cancel</button>
+      <button class="btn btn-primary" id="rent-save-btn" onclick="saveRentChange()">Save</button>
+    </div>
   </div>
 </div>
 
@@ -448,7 +481,7 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const propId = new URLSearchParams(location.search).get('id');
 if (!propId) location.href = 'property-management.html';
 
-let prop = null, tenant = null, allTenants = [], payments = [], expenses = [], docs = [];
+let prop = null, tenant = null, allTenants = [], payments = [], expenses = [], docs = [], rentHistory = [];
 let currentTab = 'overview';
 
 const themeToggle = document.getElementById('theme-toggle');
@@ -501,13 +534,14 @@ function ptBadge(type) {
 })();
 
 async function loadAll() {
-  const [propsRes, propRes, tenantsRes, payRes, expRes, docRes] = await Promise.all([
+  const [propsRes, propRes, tenantsRes, payRes, expRes, docRes, rentRes] = await Promise.all([
     db.from('pm_properties').select('id, address').order('address'),
     db.from('pm_properties').select('*').eq('id', propId).single(),
     db.from('pm_tenants').select('*').eq('property_id', propId).order('move_in_date', { ascending: true }),
     db.from('pm_payments').select('*').eq('property_id', propId).order('payment_date', { ascending: false }),
     db.from('pm_expenses').select('*').eq('property_id', propId).order('expense_date', { ascending: false }),
-    db.from('pm_lease_docs').select('*').eq('property_id', propId).order('uploaded_at', { ascending: false })
+    db.from('pm_lease_docs').select('*').eq('property_id', propId).order('uploaded_at', { ascending: false }),
+    db.from('pm_rent_history').select('*').eq('property_id', propId).order('effective_date', { ascending: false })
   ]);
 
   const allProps = propsRes.data || [];
@@ -522,6 +556,7 @@ async function loadAll() {
   payments = payRes.data || [];
   expenses = expRes.data || [];
   docs = docRes.data || [];
+  rentHistory = rentRes.data || [];
 
   document.title = `${prop.address} — PM`;
   document.getElementById('bc-address').textContent = prop.address;
@@ -587,6 +622,7 @@ function renderHero() {
   document.getElementById('hero-actions').innerHTML = `
     <button class="btn btn-secondary btn-sm" onclick="openEditPropModal()">Edit Property</button>
     <button class="btn btn-secondary btn-sm" onclick="openTenantModal()">${tenant ? 'Edit Tenant' : 'Add Tenant'}</button>
+    ${tenant ? '<button class="btn btn-secondary btn-sm" onclick="openRentModal()">Update Rent</button>' : ''}
     ${tenant ? '<button class="btn btn-primary btn-sm" onclick="openPayModal()">Record Payment</button>' : ''}
   `;
 }
@@ -732,6 +768,39 @@ async function viewDoc(docId) {
 }
 
 function renderHistory() {
+  const updateRentBtn = document.getElementById('update-rent-btn');
+  if (updateRentBtn) updateRentBtn.style.display = tenant ? '' : 'none';
+
+  // Rent history
+  const rWrap = document.getElementById('history-rent-wrap');
+  if (!rentHistory.length) {
+    rWrap.innerHTML = '<div class="empty">No rent history recorded yet.</div>';
+  } else {
+    const sorted = [...rentHistory].sort((a, b) => a.effective_date.localeCompare(b.effective_date));
+    const rows = [...rentHistory];
+    rWrap.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Effective Date</th><th class="r">Monthly Rent</th><th class="r">Change</th><th>Notes</th><th></th></tr></thead>
+      <tbody>${rows.map(r => {
+        const idx = sorted.findIndex(x => x.id === r.id);
+        const prev = sorted[idx - 1];
+        let changeTxt = '—';
+        if (prev) {
+          const diff = parseFloat(r.monthly_rent) - parseFloat(prev.monthly_rent);
+          const sign = diff >= 0 ? '+' : '';
+          const color = diff > 0 ? 'var(--positive)' : diff < 0 ? 'var(--negative)' : 'var(--text-muted)';
+          changeTxt = `<span style="color:${color};font-weight:600">${sign}${dollar(diff)}</span>`;
+        }
+        return `<tr>
+          <td>${fmtDate(r.effective_date)}</td>
+          <td class="r" style="font-weight:600">${dollar(r.monthly_rent)}</td>
+          <td class="r">${changeTxt}</td>
+          <td style="color:var(--text-muted)">${r.notes || ''}</td>
+          <td><button class="del-btn" onclick="deleteRentHistory('${r.id}')" title="Delete">✕</button></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+
   const tWrap = document.getElementById('history-tenants-wrap');
   if (!allTenants.length) {
     tWrap.innerHTML = '<div class="empty">No tenant history.</div>';
@@ -902,6 +971,17 @@ async function saveTenant() {
 
   if (error) { errEl.textContent = error.message; btn.textContent = editingTenant ? 'Save Changes' : 'Add Tenant'; btn.disabled = false; return; }
 
+  const rentVal = parseFloat(document.getElementById('t-rent').value);
+  const moveIn = document.getElementById('t-movein').value;
+  if (!editingTenant && rentVal > 0) {
+    await db.from('pm_rent_history').insert({
+      property_id:    propId,
+      monthly_rent:   rentVal,
+      effective_date: moveIn || curDateStr(),
+      notes:          'Initial rent — new tenant'
+    });
+  }
+
   const prorated = parseFloat(document.getElementById('t-prorated').value);
   if (!editingTenant && prorated > 0) {
     const moveIn = document.getElementById('t-movein').value;
@@ -939,6 +1019,48 @@ async function confirmDeactivate() {
   btn.textContent = 'End Tenancy'; btn.disabled = false;
   closeModal('modal-deactivate');
   await loadAll();
+}
+
+function openRentModal() {
+  document.getElementById('rent-amount').value = tenant?.monthly_rent || '';
+  document.getElementById('rent-date').value = curDateStr();
+  document.getElementById('rent-notes').value = '';
+  document.getElementById('rent-err').textContent = '';
+  document.getElementById('modal-rent').classList.remove('hidden');
+  setTimeout(() => document.getElementById('rent-amount').focus(), 50);
+}
+
+async function saveRentChange() {
+  const amount = document.getElementById('rent-amount').value;
+  const date   = document.getElementById('rent-date').value;
+  const errEl  = document.getElementById('rent-err');
+  if (!amount || parseFloat(amount) <= 0) { errEl.textContent = 'Enter a valid rent amount.'; return; }
+  if (!date) { errEl.textContent = 'Effective date is required.'; return; }
+  const btn = document.getElementById('rent-save-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true; errEl.textContent = '';
+
+  const { error: histErr } = await db.from('pm_rent_history').insert({
+    property_id:    propId,
+    monthly_rent:   parseFloat(amount),
+    effective_date: date,
+    notes:          document.getElementById('rent-notes').value.trim() || null
+  });
+  if (histErr) { errEl.textContent = histErr.message; btn.textContent = 'Save'; btn.disabled = false; return; }
+
+  if (tenant) {
+    await db.from('pm_tenants').update({ monthly_rent: parseFloat(amount) }).eq('id', tenant.id);
+  }
+
+  btn.textContent = 'Save'; btn.disabled = false;
+  closeModal('modal-rent');
+  await loadAll();
+}
+
+async function deleteRentHistory(id) {
+  if (!confirm('Delete this rent history entry?')) return;
+  await db.from('pm_rent_history').delete().eq('id', id);
+  rentHistory = rentHistory.filter(r => r.id !== id);
+  renderHistory();
 }
 
 function onPayTypeChange() {
