@@ -130,9 +130,25 @@
   .chart-wrap {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 16px 20px;
-    height: 300px;
+    padding: 12px 20px 16px;
+    height: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
+  .chart-controls { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .chart-controls span { font-size: 11px; color: var(--text-muted); margin-right: 4px; }
+  .range-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .range-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .retire-wrap {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -218,7 +234,7 @@
 <header>
   <h1>Salary Tracker</h1>
   <span id="status"></span>
-  <span class="version">v2026.04.26.20</span>
+  <span class="version">v2026.04.26.21</span>
   <button id="theme-toggle">🌙</button>
 </header>
 
@@ -226,6 +242,12 @@
 
 <div id="chart-section" style="display:none">
   <div class="chart-wrap">
+    <div class="chart-controls">
+      <span>View:</span>
+      <button class="range-btn active" data-range="all">Full Career</button>
+      <button class="range-btn" data-range="recent">Last 5 + Next 10</button>
+      <button class="range-btn" data-range="focus">Last 2 + Next 10</button>
+    </div>
     <canvas id="salaryChart"></canvas>
   </div>
 </div>
@@ -362,6 +384,7 @@ function themeColors() {
 }
 
 let chartInstance = null;
+let chartWindow = { start: FIRST, end: LAST };
 
 function renderChart(bases) {
   const c = themeColors();
@@ -377,7 +400,7 @@ function renderChart(bases) {
     }
   }
 
-  for (let yr = FIRST; yr <= LAST; yr++) {
+  for (let yr = chartWindow.start; yr <= chartWindow.end; yr++) {
     labels.push(`${yr}–${String(yr + 1).slice(-2)}`);
     const base = bases[yr] || 0;
     if (base > 0) {
@@ -409,17 +432,26 @@ function renderChart(bases) {
       id: 'retireShade',
       beforeDatasetsDraw(chart) {
         const { ctx: cc, chartArea, scales } = chart;
-        const x = scales.x.getPixelForValue(2032 - FIRST);
+        const labelIdx = chart.data.labels.indexOf('2032–33');
+        let x;
+        if (labelIdx === -1) {
+          if (chartWindow.start > 2032) x = chartArea.left; // whole window is post-retirement
+          else return; // 2032 is before the visible window
+        } else {
+          x = scales.x.getPixelForValue(labelIdx);
+        }
         cc.save();
         cc.fillStyle = 'rgba(74, 222, 128, 0.07)';
         cc.fillRect(x, chartArea.top, chartArea.right - x, chartArea.bottom - chartArea.top);
-        cc.strokeStyle = 'rgba(74, 222, 128, 0.5)';
-        cc.lineWidth = 1;
-        cc.setLineDash([4, 3]);
-        cc.beginPath();
-        cc.moveTo(x, chartArea.top);
-        cc.lineTo(x, chartArea.bottom);
-        cc.stroke();
+        if (labelIdx !== -1) {
+          cc.strokeStyle = 'rgba(74, 222, 128, 0.5)';
+          cc.lineWidth = 1;
+          cc.setLineDash([4, 3]);
+          cc.beginPath();
+          cc.moveTo(x, chartArea.top);
+          cc.lineTo(x, chartArea.bottom);
+          cc.stroke();
+        }
         cc.restore();
       }
     }],
@@ -665,6 +697,18 @@ toggle.addEventListener('click', () => {
   localStorage.setItem('theme', next);
   applyTheme(next);
   render();
+});
+
+document.querySelectorAll('.range-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const range = btn.dataset.range;
+    if (range === 'all')    chartWindow = { start: FIRST, end: LAST };
+    if (range === 'recent') chartWindow = { start: Math.max(FIRST, CUR_YR - 5), end: Math.min(LAST, CUR_YR + 10) };
+    if (range === 'focus')  chartWindow = { start: Math.max(FIRST, CUR_YR - 2), end: Math.min(LAST, CUR_YR + 10) };
+    renderChart(buildComputedBases());
+  });
 });
 
 function sizeTableScroll() {
