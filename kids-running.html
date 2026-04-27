@@ -148,22 +148,59 @@
     }
     tr:hover .btn-del-row { opacity: 1; }
     .btn-del-row:hover { background: rgba(220,38,38,0.15); border-color: rgba(220,38,38,0.4); color: #f87171; }
+
+    /* LOGIN */
+    #login-overlay { position: fixed; inset: 0; background: #0f172a; display: flex; align-items: center; justify-content: center; z-index: 200; }
+    .login-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 36px 40px; width: 360px; }
+    .login-box h2 { font-size: 1.2rem; margin-bottom: 4px; color: #f1f5f9; }
+    .login-box p { color: #64748b; font-size: 12px; margin-bottom: 24px; }
+    #login-error { color: #f87171; font-size: 12px; margin-top: 10px; min-height: 16px; }
+    .login-form-group { margin-bottom: 14px; }
+    .login-form-group label { display: block; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; }
+    .login-form-group input { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 8px 10px; border-radius: 6px; font-size: 13px; font-family: inherit; }
+    .login-form-group input:focus { outline: 2px solid #3b82f6; border-color: #3b82f6; }
+    .btn-login { width: 100%; padding: 9px; background: #3b82f6; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-family: inherit; font-weight: 600; cursor: pointer; }
+    .btn-login:hover { background: #2563eb; }
+    .btn-signout { background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; }
+    .btn-signout:hover { border-color: #3b82f6; }
   </style>
 </head>
 <body>
 
+<div id="login-overlay">
+  <div class="login-box">
+    <h2>🏃 Kids Running</h2>
+    <p>Sign in to view results</p>
+    <div class="login-form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="email@example.com" autocomplete="email">
+    </div>
+    <div class="login-form-group">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" onclick="doLogin()">Sign In</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+
 <div class="page-header">
   <h1>🏃 Kids Running</h1>
-  <span class="sync-meta" id="sync-meta">Loading…</span>
+  <span class="sync-meta" id="sync-meta"></span>
   <button class="btn-sync" id="sync-btn" onclick="syncNow()">Sync SportTrax</button>
   <button class="btn-sync" onclick="window.open('anet-sync.html','_blank')" style="background:#7c3aed">Sync Athletic.net</button>
   <button class="btn-sync" id="delete-btn" onclick="deleteAllResults()" style="background:#dc2626">Delete All Results</button>
-  <span style="font-size:0.72rem;color:#475569">v2026.04.19.2</span>
+  <button class="btn-signout" onclick="doLogout()">Sign Out</button>
+  <span style="font-size:0.72rem;color:#475569">v2026.04.26.28</span>
 </div>
 
 <div class="content" id="content">
   <div class="empty">Loading results…</div>
 </div>
+
+</div><!-- #app -->
 
 <script>
 const SUPABASE_URL = 'https://ebdsxcbpnhevzkbpdxry.supabase.co'
@@ -534,7 +571,35 @@ async function deleteAllResults() {
 }
 
 
-load()
+// Auth
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim()
+  const pw    = document.getElementById('login-password').value
+  const errEl = document.getElementById('login-error')
+  errEl.textContent = ''
+  const { error } = await db.auth.signInWithPassword({ email, password: pw })
+  if (error) { errEl.textContent = error.message; return }
+  showApp()
+}
+document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() })
+
+async function doLogout() {
+  await db.auth.signOut()
+  document.getElementById('app').style.display = 'none'
+  document.getElementById('login-overlay').style.display = 'flex'
+}
+
+async function showApp() {
+  document.getElementById('login-overlay').style.display = 'none'
+  document.getElementById('app').style.display = 'block'
+  load()
+}
+
+// Init
+;(async () => {
+  const { data: { session } } = await db.auth.getSession()
+  if (session) showApp()
+})()
 </script>
 </body>
 </html>
