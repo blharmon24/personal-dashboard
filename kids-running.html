@@ -474,19 +474,24 @@ async function syncNow() {
       headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
     })
     const json = await resp.json()
+    console.log('sync-sporttrax response:', JSON.stringify(json, null, 2))
     if (json.ok) {
       localStorage.setItem('kidsSyncTime', new Date().toISOString())
-      meta.textContent = 'Sync complete — reloading…'
+      const inserted = json.inserted ?? json.new ?? null
+      const detail = inserted !== null ? ` (${inserted} new)` : ''
+      meta.textContent = `Sync complete${detail} — reloading…`
       await load()
     } else {
-      meta.textContent = 'Sync error — check console'
-      console.error(json)
+      const errMsg = json.error || json.message || JSON.stringify(json)
+      meta.textContent = `Sync error: ${errMsg}`
+      console.error('sync-sporttrax error:', json)
     }
   } catch (e) {
     meta.textContent = 'Sync failed: ' + e.message
+    console.error('sync-sporttrax exception:', e)
   } finally {
     btn.disabled = false
-    btn.textContent = 'Sync from SportTrax'
+    btn.textContent = 'Sync SportTrax'
   }
 }
 
