@@ -249,12 +249,14 @@ async function load() {
   const total = all.length
   const fromST = all.filter(r => r.sporttrax_result_id != null).length
   const fromAN = all.filter(r => r.athleticnet_result_id != null).length
-  const newest = all[0]?.created_at
+  const newestData = all.length ? all.reduce((max, r) => r.created_at > max ? r.created_at : max, '') : null
+  const lastSync = localStorage.getItem('kidsSyncTime')
+  const syncDate = lastSync && (!newestData || lastSync > newestData) ? lastSync : newestData
   const sourceParts = [
     fromST ? `SportTrax: ${fromST}` : '',
     fromAN ? `Athletic.net: ${fromAN}` : '',
   ].filter(Boolean).join(' · ')
-  const dateStr = newest ? new Date(newest).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
+  const dateStr = syncDate ? new Date(syncDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null
   document.getElementById('sync-meta').textContent = dateStr
     ? `${total} results (${sourceParts}) · last synced ${dateStr}`
     : total ? `${total} results (${sourceParts})` : 'No data yet'
@@ -473,6 +475,7 @@ async function syncNow() {
     })
     const json = await resp.json()
     if (json.ok) {
+      localStorage.setItem('kidsSyncTime', new Date().toISOString())
       meta.textContent = 'Sync complete — reloading…'
       await load()
     } else {
