@@ -137,7 +137,7 @@ tr.past-tenant td{opacity:.65;}
   </div>
   <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;">Jump to:</span>
   <select class="prop-switcher" id="prop-switcher"></select>
-  <span class="version">v2026.04.26.25</span>
+  <span class="version">v2026.04.26.26</span>
   <button class="btn btn-secondary btn-sm" onclick="doLogout()">Sign Out</button>
   <button class="theme-btn" id="theme-toggle">🌙</button>
 </header>
@@ -167,6 +167,7 @@ tr.past-tenant td{opacity:.65;}
   <button class="tab-btn" data-tab="expenses" onclick="switchTab('expenses')">Expenses</button>
   <button class="tab-btn" data-tab="documents" onclick="switchTab('documents')">Documents</button>
   <button class="tab-btn" data-tab="history" onclick="switchTab('history')">History</button>
+  <button class="tab-btn" data-tab="tax" onclick="switchTab('tax')">Tax &amp; Insurance</button>
 </div>
 
 <!-- TAB: OVERVIEW -->
@@ -247,6 +248,81 @@ tr.past-tenant td{opacity:.65;}
   <div class="history-section">
     <div class="history-section-title">All Payments</div>
     <div id="history-payments-wrap"></div>
+  </div>
+</div>
+
+<!-- TAB: TAX & INSURANCE -->
+<div class="tab-pane hidden" id="tab-tax">
+  <div class="info-card">
+    <div class="info-card-header">
+      <span class="info-card-title">Home Insurance</span>
+      <button class="btn btn-secondary btn-sm" id="insurance-edit-btn" onclick="openInsuranceModal()">Add Policy</button>
+    </div>
+    <div id="insurance-body"></div>
+  </div>
+  <div class="info-card">
+    <div class="info-card-header">
+      <span class="info-card-title">Property Tax</span>
+      <button class="btn btn-primary btn-sm" onclick="openTaxModal(null)">+ Add Year</button>
+    </div>
+    <div id="tax-body"></div>
+  </div>
+</div>
+
+<!-- MODAL: EDIT INSURANCE -->
+<div class="modal-overlay hidden" id="modal-insurance">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Insurance Policy</h3>
+      <button class="modal-close" onclick="closeModal('modal-insurance')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Insurer *</label><input type="text" id="ins-insurer" placeholder="State Farm"></div>
+      <div class="form-group"><label>Policy Number</label><input type="text" id="ins-policy"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Premium ($)</label><input type="number" id="ins-premium" step="0.01" min="0"></div>
+      <div class="form-group">
+        <label>Frequency</label>
+        <select id="ins-freq"><option>Annual</option><option>Semi-Annual</option><option>Monthly</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Renewal / Expiration Date</label><input type="date" id="ins-renewal"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Agent Name</label><input type="text" id="ins-agent"></div>
+      <div class="form-group"><label>Agent Phone</label><input type="tel" id="ins-phone"></div>
+    </div>
+    <div class="form-group"><label>Agent Email</label><input type="email" id="ins-email"></div>
+    <div class="form-group"><label>Notes</label><textarea id="ins-notes" rows="2" style="resize:vertical"></textarea></div>
+    <div class="modal-error" id="ins-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-insurance')">Cancel</button>
+      <button class="btn btn-primary" id="ins-save-btn" onclick="saveInsurance()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD/EDIT PROPERTY TAX -->
+<div class="modal-overlay hidden" id="modal-tax">
+  <div class="modal" style="width:420px;">
+    <div class="modal-header">
+      <h3 id="tax-modal-title">Add Property Tax</h3>
+      <button class="modal-close" onclick="closeModal('modal-tax')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tax Year *</label><input type="number" id="tax-year" min="2000" max="2100"></div>
+      <div class="form-group"><label>Amount ($)</label><input type="number" id="tax-amount" step="0.01" min="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Due Date</label><input type="date" id="tax-due"></div>
+      <div class="form-group"><label>Paid Date</label><input type="date" id="tax-paid"></div>
+    </div>
+    <div class="form-group"><label>Notes</label><input type="text" id="tax-notes"></div>
+    <div class="modal-error" id="tax-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-tax')">Cancel</button>
+      <button class="btn btn-primary" id="tax-save-btn" onclick="saveTax()">Add</button>
+    </div>
   </div>
 </div>
 
@@ -503,7 +579,7 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const propId = new URLSearchParams(location.search).get('id');
 if (!propId) location.href = 'property-management.html';
 
-let prop = null, tenant = null, allTenants = [], payments = [], expenses = [], docs = [], rentHistory = [];
+let prop = null, tenant = null, allTenants = [], payments = [], expenses = [], docs = [], rentHistory = [], insurance = null, propertyTaxes = [];
 let currentTab = 'overview';
 
 const themeToggle = document.getElementById('theme-toggle');
@@ -556,14 +632,16 @@ function ptBadge(type) {
 })();
 
 async function loadAll() {
-  const [propsRes, propRes, tenantsRes, payRes, expRes, docRes, rentRes] = await Promise.all([
+  const [propsRes, propRes, tenantsRes, payRes, expRes, docRes, rentRes, insRes, taxRes] = await Promise.all([
     db.from('pm_properties').select('id, address').order('address'),
     db.from('pm_properties').select('*').eq('id', propId).single(),
     db.from('pm_tenants').select('*').eq('property_id', propId).order('move_in_date', { ascending: true }),
     db.from('pm_payments').select('*').eq('property_id', propId).order('payment_date', { ascending: false }),
     db.from('pm_expenses').select('*').eq('property_id', propId).order('expense_date', { ascending: false }),
     db.from('pm_lease_docs').select('*').eq('property_id', propId).order('uploaded_at', { ascending: false }),
-    db.from('pm_rent_history').select('*').eq('property_id', propId).order('effective_date', { ascending: false })
+    db.from('pm_rent_history').select('*').eq('property_id', propId).order('effective_date', { ascending: false }),
+    db.from('pm_insurance').select('*').eq('property_id', propId).maybeSingle(),
+    db.from('pm_property_tax').select('*').eq('property_id', propId).order('tax_year', { ascending: false })
   ]);
 
   const allProps = propsRes.data || [];
@@ -579,6 +657,8 @@ async function loadAll() {
   expenses = expRes.data || [];
   docs = docRes.data || [];
   rentHistory = rentRes.data || [];
+  insurance = insRes.data || null;
+  propertyTaxes = taxRes.data || [];
 
   document.title = `${prop.address} — PM`;
   document.getElementById('bc-address').textContent = prop.address;
@@ -696,6 +776,7 @@ function switchTab(tab) {
   else if (tab === 'expenses') renderExpenses();
   else if (tab === 'documents') renderDocuments();
   else if (tab === 'history') renderHistory();
+  else if (tab === 'tax') renderTaxInsurance();
 }
 
 function buildPayFilter() {
@@ -1055,6 +1136,160 @@ async function confirmDeactivate() {
   btn.textContent = 'End Tenancy'; btn.disabled = false;
   closeModal('modal-deactivate');
   await loadAll();
+}
+
+function insuranceWarning(d) {
+  if (!d) return '';
+  const diff = Math.floor((new Date(d + 'T12:00:00') - new Date()) / 86400000);
+  if (diff < 0)   return ' <span style="color:var(--negative);font-size:11px;font-weight:600;">⚠ EXPIRED</span>';
+  if (diff <= 30) return ` <span style="color:var(--negative);font-size:11px;">⚠ Expires in ${diff}d</span>`;
+  if (diff <= 60) return ` <span style="color:var(--warn);font-size:11px;">⚠ Expires in ${diff}d</span>`;
+  return '';
+}
+
+function taxStatusHtml(t) {
+  if (t.paid_date) return `<span style="color:var(--positive);">✓ Paid ${fmtDate(t.paid_date)}</span>`;
+  if (!t.due_date) return '<span style="color:var(--text-muted);">Unpaid</span>';
+  const diff = Math.floor((new Date(t.due_date + 'T12:00:00') - new Date()) / 86400000);
+  if (diff < 0)   return '<span style="color:var(--negative);font-weight:600;">OVERDUE</span>';
+  if (diff <= 30) return `<span style="color:var(--negative);">Due in ${diff}d</span>`;
+  if (diff <= 60) return `<span style="color:var(--warn);">Due in ${diff}d</span>`;
+  return '<span style="color:var(--text-muted);">Unpaid</span>';
+}
+
+function renderTaxInsurance() {
+  const insBtn = document.getElementById('insurance-edit-btn');
+  const insBody = document.getElementById('insurance-body');
+  if (insurance) {
+    insBtn.textContent = 'Edit';
+    insBody.innerHTML = `<div class="info-grid">
+      <div class="info-field"><label>Insurer</label><span>${insurance.insurer || '—'}</span></div>
+      <div class="info-field"><label>Policy Number</label><span>${insurance.policy_number || '—'}</span></div>
+      <div class="info-field"><label>Premium</label><span>${insurance.premium_amount ? dollar(insurance.premium_amount) + ' / ' + (insurance.premium_frequency || 'Annual') : '—'}</span></div>
+      <div class="info-field"><label>Renewal Date</label><span>${fmtDate(insurance.renewal_date)}${insuranceWarning(insurance.renewal_date)}</span></div>
+      <div class="info-field"><label>Agent</label><span>${insurance.agent_name || '—'}</span></div>
+      <div class="info-field"><label>Agent Phone</label><span>${insurance.agent_phone || '—'}</span></div>
+      ${insurance.agent_email ? `<div class="info-field"><label>Agent Email</label><span>${insurance.agent_email}</span></div>` : ''}
+      ${insurance.notes ? `<div class="info-field" style="grid-column:1/-1"><label>Notes</label><span>${insurance.notes}</span></div>` : ''}
+    </div>`;
+  } else {
+    insBtn.textContent = 'Add Policy';
+    insBody.innerHTML = '<div class="empty">No insurance policy on record.</div>';
+  }
+
+  const taxBody = document.getElementById('tax-body');
+  if (!propertyTaxes.length) {
+    taxBody.innerHTML = '<div class="empty">No property tax records yet.</div>';
+    return;
+  }
+  taxBody.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Year</th><th class="r">Amount</th><th>Due Date</th><th>Status</th><th>Notes</th><th></th></tr></thead>
+    <tbody>${propertyTaxes.map(t => `<tr>
+      <td style="font-weight:600">${t.tax_year}</td>
+      <td class="r">${t.amount ? dollar(t.amount) : '—'}</td>
+      <td>${fmtDate(t.due_date)}</td>
+      <td>${taxStatusHtml(t)}</td>
+      <td style="color:var(--text-muted)">${t.notes || ''}</td>
+      <td style="white-space:nowrap">
+        ${!t.paid_date ? `<button class="btn btn-secondary btn-sm" onclick="markTaxPaid('${t.id}')" style="margin-right:4px;">Mark Paid</button>` : ''}
+        <button class="btn btn-secondary btn-sm" onclick="openTaxModal('${t.id}')" style="margin-right:4px;">Edit</button>
+        <button class="del-btn" onclick="deleteTax('${t.id}')" title="Delete">✕</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function openInsuranceModal() {
+  document.getElementById('ins-insurer').value  = insurance?.insurer          || '';
+  document.getElementById('ins-policy').value   = insurance?.policy_number    || '';
+  document.getElementById('ins-premium').value  = insurance?.premium_amount   || '';
+  document.getElementById('ins-freq').value      = insurance?.premium_frequency || 'Annual';
+  document.getElementById('ins-renewal').value  = insurance?.renewal_date     || '';
+  document.getElementById('ins-agent').value    = insurance?.agent_name       || '';
+  document.getElementById('ins-phone').value    = insurance?.agent_phone      || '';
+  document.getElementById('ins-email').value    = insurance?.agent_email      || '';
+  document.getElementById('ins-notes').value    = insurance?.notes            || '';
+  document.getElementById('ins-err').textContent = '';
+  document.getElementById('modal-insurance').classList.remove('hidden');
+}
+
+async function saveInsurance() {
+  const insurer = document.getElementById('ins-insurer').value.trim();
+  const errEl = document.getElementById('ins-err');
+  if (!insurer) { errEl.textContent = 'Insurer name is required.'; return; }
+  const btn = document.getElementById('ins-save-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  const data = {
+    property_id:       propId,
+    insurer,
+    policy_number:     document.getElementById('ins-policy').value.trim()   || null,
+    premium_amount:    document.getElementById('ins-premium').value          || null,
+    premium_frequency: document.getElementById('ins-freq').value,
+    renewal_date:      document.getElementById('ins-renewal').value          || null,
+    agent_name:        document.getElementById('ins-agent').value.trim()     || null,
+    agent_phone:       document.getElementById('ins-phone').value.trim()     || null,
+    agent_email:       document.getElementById('ins-email').value.trim()     || null,
+    notes:             document.getElementById('ins-notes').value.trim()     || null
+  };
+  const { error } = insurance
+    ? await db.from('pm_insurance').update(data).eq('id', insurance.id)
+    : await db.from('pm_insurance').insert(data);
+  if (error) { errEl.textContent = error.message; btn.textContent = 'Save'; btn.disabled = false; return; }
+  btn.textContent = 'Save'; btn.disabled = false;
+  closeModal('modal-insurance');
+  await loadAll();
+}
+
+let editingTaxId = null;
+
+function openTaxModal(taxId) {
+  editingTaxId = taxId || null;
+  const ex = taxId ? propertyTaxes.find(t => t.id === taxId) : null;
+  document.getElementById('tax-modal-title').textContent = ex ? 'Edit Property Tax' : 'Add Property Tax';
+  document.getElementById('tax-save-btn').textContent = ex ? 'Save Changes' : 'Add';
+  document.getElementById('tax-year').value   = ex?.tax_year  || new Date().getFullYear();
+  document.getElementById('tax-amount').value = ex?.amount    || '';
+  document.getElementById('tax-due').value    = ex?.due_date  || '';
+  document.getElementById('tax-paid').value   = ex?.paid_date || '';
+  document.getElementById('tax-notes').value  = ex?.notes     || '';
+  document.getElementById('tax-err').textContent = '';
+  document.getElementById('modal-tax').classList.remove('hidden');
+}
+
+async function saveTax() {
+  const year = document.getElementById('tax-year').value;
+  const errEl = document.getElementById('tax-err');
+  if (!year) { errEl.textContent = 'Tax year is required.'; return; }
+  const btn = document.getElementById('tax-save-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  const data = {
+    property_id: propId,
+    tax_year:    parseInt(year),
+    amount:      document.getElementById('tax-amount').value || null,
+    due_date:    document.getElementById('tax-due').value    || null,
+    paid_date:   document.getElementById('tax-paid').value   || null,
+    notes:       document.getElementById('tax-notes').value.trim() || null
+  };
+  const { error } = editingTaxId
+    ? await db.from('pm_property_tax').update(data).eq('id', editingTaxId)
+    : await db.from('pm_property_tax').insert(data);
+  if (error) { errEl.textContent = error.message; btn.textContent = btn.textContent === 'Saving…' ? 'Add' : btn.textContent; btn.disabled = false; return; }
+  btn.disabled = false;
+  closeModal('modal-tax');
+  await loadAll();
+}
+
+async function markTaxPaid(id) {
+  await db.from('pm_property_tax').update({ paid_date: curDateStr() }).eq('id', id);
+  propertyTaxes = propertyTaxes.map(t => t.id === id ? { ...t, paid_date: curDateStr() } : t);
+  renderTaxInsurance();
+}
+
+async function deleteTax(id) {
+  if (!confirm('Delete this property tax record?')) return;
+  await db.from('pm_property_tax').delete().eq('id', id);
+  propertyTaxes = propertyTaxes.filter(t => t.id !== id);
+  renderTaxInsurance();
 }
 
 function openSellModal() {

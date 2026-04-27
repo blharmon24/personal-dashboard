@@ -111,6 +111,25 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
 .photo-upload-area p{color:var(--text-muted);font-size:12px;margin-top:6px;}
 .photo-preview{width:100%;height:140px;object-fit:cover;border-radius:6px;display:none;}
 
+/* OVERVIEW TABLE */
+.overview-wrap{overflow-x:auto;}
+.ov-table{width:100%;border-collapse:collapse;white-space:nowrap;}
+.ov-table th{font-size:10px;font-weight:600;color:var(--text-muted);padding:8px 6px;text-transform:uppercase;letter-spacing:.04em;text-align:center;border-bottom:1px solid var(--border);background:var(--surface);}
+.ov-table th.addr-col{text-align:left;padding-left:16px;min-width:160px;}
+.ov-table td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;}
+.ov-table td.addr-col{text-align:left;padding-left:16px;font-size:12px;color:var(--text);font-weight:400;}
+.ov-table tbody tr:last-child td{border-bottom:none;}
+.ov-table tbody tr:hover td{background:rgba(255,255,255,.03);}
+[data-theme="light"] .ov-table tbody tr:hover td{background:rgba(0,0,0,.02);}
+.ov-paid{background:rgba(74,222,128,.15);color:var(--positive);}
+.ov-partial{background:rgba(251,191,36,.15);color:var(--warn);}
+.ov-late{background:rgba(248,113,113,.15);color:var(--negative);}
+.ov-vacant{color:var(--text-muted);}
+.ov-none{color:var(--border);}
+.view-toggle{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.view-toggle button{background:none;border:none;padding:5px 12px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--text-muted);}
+.view-toggle button.active{background:var(--accent);color:#fff;}
+
 /* LOADING / EMPTY */
 .loading{padding:40px;text-align:center;color:var(--text-muted);}
 .empty-state{padding:60px 20px;text-align:center;color:var(--text-muted);}
@@ -145,7 +164,7 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
   </a>
   <h1>Property Management</h1>
-  <span class="version">v2026.04.26.25</span>
+  <span class="version">v2026.04.26.26</span>
   <span class="header-user" id="header-user"></span>
   <button class="btn btn-secondary btn-sm" onclick="doLogout()">Sign Out</button>
   <button class="theme-btn" id="theme-toggle">🌙</button>
@@ -182,6 +201,10 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
   <div class="main-toolbar">
     <h2 id="prop-count-label">Properties</h2>
     <div style="display:flex;gap:8px;align-items:center;">
+      <div class="view-toggle">
+        <button id="view-cards-btn" class="active" onclick="setView('cards')">Cards</button>
+        <button id="view-overview-btn" onclick="setView('overview')">Overview</button>
+      </div>
       <button class="btn btn-secondary btn-sm" id="sold-toggle" onclick="toggleSold()">Show Sold</button>
       <button class="btn btn-primary" onclick="openAddModal()">+ Add Property</button>
     </div>
@@ -189,6 +212,7 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
   <div class="cards-grid" id="cards-grid">
     <div class="loading">Loading…</div>
   </div>
+  <div id="overview-container" style="display:none;"></div>
 </div>
 
 </div><!-- #app -->
@@ -295,7 +319,7 @@ async function showApp() {
 })();
 
 // Data
-let allProps = [], allTenants = [], monthPays = [], monthExps = [], showSold = false;
+let allProps = [], allTenants = [], monthPays = [], monthExps = [], allPayments12Mo = [], showSold = false, currentView = 'cards';
 
 function monthStart() {
   const t = new Date();
@@ -310,20 +334,28 @@ function dollar(n) {
   return '$' + Number(n||0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function start12Mo() {
+  const d = new Date(); d.setMonth(d.getMonth() - 11); d.setDate(1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+}
+
 async function loadData() {
   const ms = monthStart(), nms = nextMonthStart();
-  const [p, t, pay, exp] = await Promise.all([
+  const [p, t, pay, exp, pay12] = await Promise.all([
     db.from('pm_properties').select('*').order('address'),
     db.from('pm_tenants').select('*').eq('is_active', true),
     db.from('pm_payments').select('*').eq('for_month', ms),
-    db.from('pm_expenses').select('*').gte('expense_date', ms).lt('expense_date', nms)
+    db.from('pm_expenses').select('*').gte('expense_date', ms).lt('expense_date', nms),
+    db.from('pm_payments').select('property_id, amount, for_month, payment_type').gte('for_month', start12Mo())
   ]);
   allProps = p.data || [];
   allTenants = t.data || [];
   monthPays = pay.data || [];
   monthExps = exp.data || [];
+  allPayments12Mo = pay12.data || [];
   renderStats();
-  renderCards();
+  if (currentView === 'cards') renderCards();
+  else renderOverview();
 }
 
 function tenantFor(propId) { return allTenants.find(t => t.property_id === propId) || null; }
@@ -369,7 +401,84 @@ function renderStats() {
   document.getElementById('prop-count-label').textContent = `${visibleCount} Propert${visibleCount===1?'y':'ies'}`;
 }
 
-function toggleSold() { showSold = !showSold; renderStats(); renderCards(); }
+function setView(v) {
+  currentView = v;
+  document.getElementById('view-cards-btn').classList.toggle('active', v === 'cards');
+  document.getElementById('view-overview-btn').classList.toggle('active', v === 'overview');
+  document.getElementById('cards-grid').style.display = v === 'cards' ? '' : 'none';
+  document.getElementById('overview-container').style.display = v === 'overview' ? '' : 'none';
+  if (v === 'overview') renderOverview();
+  else renderCards();
+}
+
+function getLast12Months() {
+  const months = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      key:   `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`,
+      label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+    });
+  }
+  return months;
+}
+
+function curMonthKey() {
+  const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+function ovCellStatus(prop, monthKey, tenant) {
+  const mk = monthKey.substring(0, 7);
+  const rentPaid = allPayments12Mo
+    .filter(p => p.property_id === prop.id && p.for_month && p.for_month.substring(0,7) === mk && (!p.payment_type || p.payment_type === 'Rent'))
+    .reduce((s, p) => s + parseFloat(p.amount||0), 0);
+
+  if (!tenant) {
+    return rentPaid > 0 ? { cls:'ov-paid', txt:'PAID' } : { cls:'ov-vacant', txt:'VAC' };
+  }
+
+  const moveIn = tenant.move_in_date ? tenant.move_in_date.substring(0,7) : null;
+  if (moveIn && mk < moveIn) return rentPaid > 0 ? { cls:'ov-paid', txt:'PAID' } : { cls:'ov-none', txt:'—' };
+
+  const due = parseFloat(tenant.monthly_rent || 0);
+  if (due > 0 && rentPaid >= due) return { cls:'ov-paid', txt:'PAID' };
+  if (rentPaid > 0) return { cls:'ov-partial', txt:'PART' };
+
+  const cur = curMonthKey();
+  if (mk < cur) return { cls:'ov-late', txt:'LATE' };
+  const day = new Date().getDate();
+  if (day >= 7) return { cls:'ov-late', txt:'LATE' };
+  if (day >= 5) return { cls:'ov-partial', txt:'DUE' };
+  return { cls:'ov-none', txt:'—' };
+}
+
+function renderOverview() {
+  const months = getLast12Months();
+  const visible = showSold ? allProps : allProps.filter(p => !p.is_sold);
+  const container = document.getElementById('overview-container');
+  if (!visible.length) { container.innerHTML = '<div class="empty-state"><h3>No properties</h3></div>'; return; }
+  container.innerHTML = `<div class="overview-wrap"><div class="table-wrap">
+    <table class="ov-table">
+      <thead><tr>
+        <th class="addr-col">Property</th>
+        ${months.map(m => `<th>${m.label}</th>`).join('')}
+      </tr></thead>
+      <tbody>${visible.map(prop => {
+        if (prop.is_sold) {
+          return `<tr><td class="addr-col" style="color:var(--text-muted)">${prop.address} <span style="font-size:10px;">(SOLD)</span></td>${months.map(() => `<td class="ov-none">—</td>`).join('')}</tr>`;
+        }
+        const t = tenantFor(prop.id);
+        return `<tr>
+          <td class="addr-col"><a href="property-detail.html?id=${prop.id}" style="color:var(--text);text-decoration:none;">${prop.address}</a></td>
+          ${months.map(m => { const s = ovCellStatus(prop, m.key, t); return `<td class="${s.cls}">${s.txt}</td>`; }).join('')}
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+  </div></div>`;
+}
+
+function toggleSold() { showSold = !showSold; renderStats(); if (currentView === 'cards') renderCards(); else renderOverview(); }
 
 function renderCards() {
   const grid = document.getElementById('cards-grid');
