@@ -269,7 +269,7 @@
   <h1>Salary Tracker</h1>
   <span id="status"></span>
   <span class="header-user" id="header-user"></span>
-  <span class="version">v2026.04.26.27</span>
+  <span class="version">v2026.04.26.30</span>
   <button class="btn-signout" onclick="doLogout()">Sign Out</button>
   <button id="theme-toggle">🌙</button>
 </header>
@@ -333,9 +333,9 @@
         <th>Base Salary</th>
         <th>COLA %</th>
         <th>Sick Hrs</th>
-        <th>SL Bonus</th>
-        <th>Salary + Bonus</th>
+        <th>Wellness Bonus</th>
         <th>Personal Hrs</th>
+        <th>Salary + Bonus</th>
         <th>Paycheck</th>
         <th>Monthly +/-</th>
         <th>Yearly +/-</th>
@@ -699,8 +699,8 @@ function render() {
       <td>${colaInner}</td>
       <td><input type="number" class="f-slh"  data-yr="${yr}" value="${slh || ''}"></td>
       <td class="tier-${tier}">${tier > 0 ? tier + '%' : '<span class="c-dim">—</span>'}</td>
-      <td>${total > 0 ? dollar(total) : '<span class="c-dim">—</span>'}</td>
       <td><input type="number" class="f-plh"  data-yr="${yr}" value="${plh || ''}"></td>
+      <td>${total > 0 ? dollar(total) : '<span class="c-dim">—</span>'}</td>
       <td>${pay > 0 ? dollar(pay) : '<span class="c-dim">—</span>'}</td>
       <td>${mCell}</td>
       <td>${yCell}</td>
