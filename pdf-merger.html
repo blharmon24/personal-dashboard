@@ -687,6 +687,12 @@
     }
   }
 
+  function drawPageNum(page, num, font, centerX, y) {
+    const text = String(num);
+    const w = font.widthOfTextAtSize(text, 9);
+    page.drawText(text, { x: centerX - w / 2, y, size: 9, font, color: rgb(0.55, 0.55, 0.55) });
+  }
+
   // Returns per-page gutter values, mirroring binding side for duplex if enabled.
   // pageNum is 1-based; odd = front (gutter left), even = back (gutter right).
   function getPageMargins(pageNum, leftPts, rightPts, topPts, bottomPts, mirrorDuplex) {
@@ -739,7 +745,7 @@
     });
   }
 
-  async function buildReflectionPage(mergedDoc, srcSize, bodyFont, boldFont, questions, gLeft, gRight, gTop, gBottom) {
+  async function buildReflectionPage(mergedDoc, srcSize, bodyFont, boldFont, questions, gLeft, gRight, gTop, gBottom, pageNum) {
     const width  = srcSize.width  + gLeft + gRight;
     const height = srcSize.height + gTop  + gBottom;
     const page = mergedDoc.addPage([width, height]);
@@ -794,6 +800,10 @@
       }
       y -= gap;
     }
+
+    // Page number at bottom center of content area
+    const pnY = gBottom > 0 ? Math.round(gBottom / 2) : 10;
+    drawPageNum(page, pageNum, bodyFont, gLeft + srcSize.width / 2, pnY);
   }
 
   mergeBtn.addEventListener('click', async () => {
@@ -831,6 +841,7 @@
       const total = selectedFiles.length;
       let reflectionCount = 0;
       let docPageCount = 0;
+      let pageNumber = 0;
 
       for (let i = 0; i < total; i++) {
         const f = selectedFiles[i];
@@ -839,6 +850,7 @@
 
         if (seg !== null && seg !== lastSeg && SESSION_NAMES[seg]) {
           docPageCount++;
+          pageNumber++; // divider counts in sequence but shows no number
           const { gLeft, gRight, gTop, gBottom } = getPageMargins(docPageCount, leftPts, rightPts, topPts, bottomPts, mirrorDuplex);
           await buildDividerPage(merged, sourcePageSize, month, year, seg, bodyFont, boldFont, gLeft, gRight, gTop, gBottom);
           lastSeg = seg;
@@ -850,18 +862,23 @@
         pages.forEach(p => {
           merged.addPage(p);
           docPageCount++;
+          pageNumber++;
           const { gLeft, gRight, gTop, gBottom } = getPageMargins(docPageCount, leftPts, rightPts, topPts, bottomPts, mirrorDuplex);
+          const origMb = p.getMediaBox();
           if (gLeft || gRight || gTop || gBottom) {
-            const mb = p.getMediaBox();
-            p.setMediaBox(mb.x - gLeft, mb.y - gBottom, mb.width + gLeft + gRight, mb.height + gTop + gBottom);
-            p.setCropBox(mb.x - gLeft, mb.y - gBottom, mb.width + gLeft + gRight, mb.height + gTop + gBottom);
+            p.setMediaBox(origMb.x - gLeft, origMb.y - gBottom, origMb.width + gLeft + gRight, origMb.height + gTop + gBottom);
+            p.setCropBox(origMb.x - gLeft, origMb.y - gBottom, origMb.width + gLeft + gRight, origMb.height + gTop + gBottom);
           }
+          // Page number centered within the original content area, at the bottom of the gutter
+          const pnY = origMb.y - gBottom + (gBottom > 0 ? Math.round(gBottom / 2) : 10);
+          drawPageNum(p, pageNumber, bodyFont, origMb.x + origMb.width / 2, pnY);
         });
 
         if (showReflection && questions.length > 0) {
           docPageCount++;
+          pageNumber++;
           const { gLeft, gRight, gTop, gBottom } = getPageMargins(docPageCount, leftPts, rightPts, topPts, bottomPts, mirrorDuplex);
-          await buildReflectionPage(merged, sourcePageSize, bodyFont, boldFont, questions, gLeft, gRight, gTop, gBottom);
+          await buildReflectionPage(merged, sourcePageSize, bodyFont, boldFont, questions, gLeft, gRight, gTop, gBottom, pageNumber);
           reflectionCount++;
         }
 
