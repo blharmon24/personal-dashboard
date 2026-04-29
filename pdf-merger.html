@@ -150,6 +150,51 @@
     }
     .font-note span { color: var(--accent); }
 
+    /* Sliders */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 6px;
+    }
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--surface);
+      cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--surface);
+      cursor: pointer;
+    }
+    .slider-val {
+      font-size: 0.82rem;
+      color: var(--text);
+      min-width: 54px;
+      text-align: right;
+    }
+    .margin-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 24px;
+    }
+    .margin-grid .settings-field { gap: 4px; }
+
     /* Session preview list */
     .sessions-preview {
       margin-top: 16px;
@@ -339,6 +384,40 @@
         <input type="text" id="q3" value="What was the invitation outcome?">
       </div>
     </div>
+
+    <hr class="panel-sep">
+
+    <h3>Page Margins</h3>
+    <div class="margin-grid">
+      <div class="settings-field">
+        <label>Left (binding gutter)</label>
+        <div class="slider-row">
+          <input type="range" id="leftMarginSlider" min="0" max="1.5" step="0.125" value="0.5">
+          <span class="slider-val" id="leftMarginVal">0.500 in</span>
+        </div>
+      </div>
+      <div class="settings-field">
+        <label>Right</label>
+        <div class="slider-row">
+          <input type="range" id="rightMarginSlider" min="0" max="1" step="0.125" value="0">
+          <span class="slider-val" id="rightMarginVal">0.000 in</span>
+        </div>
+      </div>
+      <div class="settings-field">
+        <label>Top</label>
+        <div class="slider-row">
+          <input type="range" id="topMarginSlider" min="0" max="1" step="0.125" value="0">
+          <span class="slider-val" id="topMarginVal">0.000 in</span>
+        </div>
+      </div>
+      <div class="settings-field">
+        <label>Bottom</label>
+        <div class="slider-row">
+          <input type="range" id="bottomMarginSlider" min="0" max="1" step="0.125" value="0">
+          <span class="slider-val" id="bottomMarginVal">0.000 in</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="fileListBox" class="file-list-box" style="display:none">
@@ -388,11 +467,19 @@
   const yearSelect      = document.getElementById('yearSelect');
   const fontNote        = document.getElementById('fontNote');
   const sessionsPreview = document.getElementById('sessionsPreview');
-  const reflectionToggle = document.getElementById('reflectionToggle');
-  const questionFields   = document.getElementById('questionFields');
-  const q1Input          = document.getElementById('q1');
-  const q2Input          = document.getElementById('q2');
-  const q3Input          = document.getElementById('q3');
+  const reflectionToggle  = document.getElementById('reflectionToggle');
+  const questionFields    = document.getElementById('questionFields');
+  const q1Input           = document.getElementById('q1');
+  const q2Input           = document.getElementById('q2');
+  const q3Input           = document.getElementById('q3');
+  const leftMarginSlider  = document.getElementById('leftMarginSlider');
+  const rightMarginSlider = document.getElementById('rightMarginSlider');
+  const topMarginSlider   = document.getElementById('topMarginSlider');
+  const bottomMarginSlider = document.getElementById('bottomMarginSlider');
+  const leftMarginVal     = document.getElementById('leftMarginVal');
+  const rightMarginVal    = document.getElementById('rightMarginVal');
+  const topMarginVal      = document.getElementById('topMarginVal');
+  const bottomMarginVal   = document.getElementById('bottomMarginVal');
 
   // Populate year dropdown
   const currentYear = new Date().getFullYear();
@@ -403,6 +490,13 @@
     if (y === currentYear) opt.selected = true;
     yearSelect.appendChild(opt);
   }
+
+  // Margin slider live readouts
+  function fmtIn(v) { return parseFloat(v).toFixed(3) + ' in'; }
+  leftMarginSlider.addEventListener('input',   () => { leftMarginVal.textContent   = fmtIn(leftMarginSlider.value); });
+  rightMarginSlider.addEventListener('input',  () => { rightMarginVal.textContent  = fmtIn(rightMarginSlider.value); });
+  topMarginSlider.addEventListener('input',    () => { topMarginVal.textContent    = fmtIn(topMarginSlider.value); });
+  bottomMarginSlider.addEventListener('input', () => { bottomMarginVal.textContent = fmtIn(bottomMarginSlider.value); });
 
   // Show/hide question fields when toggle changes
   reflectionToggle.addEventListener('change', () => {
@@ -691,6 +785,10 @@
     const year  = yearSelect.value;
     const showReflection = reflectionToggle.checked;
     const questions = [q1Input.value.trim(), q2Input.value.trim(), q3Input.value.trim()].filter(Boolean);
+    const leftPts   = Math.round(parseFloat(leftMarginSlider.value)   * 72);
+    const rightPts  = Math.round(parseFloat(rightMarginSlider.value)  * 72);
+    const topPts    = Math.round(parseFloat(topMarginSlider.value)    * 72);
+    const bottomPts = Math.round(parseFloat(bottomMarginSlider.value) * 72);
 
     try {
       const merged = await PDFDocument.create();
@@ -708,6 +806,12 @@
         sourcePageSize   = firstPdf.getPage(0).getSize();
       } catch {}
 
+      // Divider and reflection pages are built at the expanded size
+      const expandedPageSize = {
+        width:  sourcePageSize.width  + leftPts + rightPts,
+        height: sourcePageSize.height + topPts  + bottomPts,
+      };
+
       let lastSeg = null;
       const total = selectedFiles.length;
       let reflectionCount = 0;
@@ -718,17 +822,24 @@
         const seg = order ? order[0] : null;
 
         if (seg !== null && seg !== lastSeg && SESSION_NAMES[seg]) {
-          await buildDividerPage(merged, sourcePageSize, month, year, seg, bodyFont, boldFont);
+          await buildDividerPage(merged, expandedPageSize, month, year, seg, bodyFont, boldFont);
           lastSeg = seg;
         }
 
         const bytes = await f.arrayBuffer();
         const pdf   = await PDFDocument.load(bytes);
         const pages = await merged.copyPages(pdf, pdf.getPageIndices());
-        pages.forEach(p => merged.addPage(p));
+        pages.forEach(p => {
+          merged.addPage(p);
+          if (leftPts || rightPts || topPts || bottomPts) {
+            const mb = p.getMediaBox();
+            p.setMediaBox(mb.x - leftPts, mb.y - bottomPts, mb.width + leftPts + rightPts, mb.height + topPts + bottomPts);
+            p.setCropBox(mb.x - leftPts, mb.y - bottomPts, mb.width + leftPts + rightPts, mb.height + topPts + bottomPts);
+          }
+        });
 
         if (showReflection && questions.length > 0) {
-          await buildReflectionPage(merged, sourcePageSize, bodyFont, boldFont, questions);
+          await buildReflectionPage(merged, expandedPageSize, bodyFont, boldFont, questions);
           reflectionCount++;
         }
 
