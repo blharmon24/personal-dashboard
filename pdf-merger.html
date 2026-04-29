@@ -388,9 +388,13 @@
     <hr class="panel-sep">
 
     <h3>Page Margins</h3>
+    <div class="toggle-row" style="margin-bottom:14px;">
+      <input type="checkbox" id="duplexToggle" checked>
+      <label for="duplexToggle">Mirror binding gutter for duplex printing (odd pages left, even pages right)</label>
+    </div>
     <div class="margin-grid">
       <div class="settings-field">
-        <label>Left (binding gutter)</label>
+        <label>Binding gutter</label>
         <div class="slider-row">
           <input type="range" id="leftMarginSlider" min="0" max="1.5" step="0.125" value="0.5">
           <span class="slider-val" id="leftMarginVal">0.500 in</span>
@@ -472,6 +476,7 @@
   const q1Input           = document.getElementById('q1');
   const q2Input           = document.getElementById('q2');
   const q3Input           = document.getElementById('q3');
+  const duplexToggle      = document.getElementById('duplexToggle');
   const leftMarginSlider  = document.getElementById('leftMarginSlider');
   const rightMarginSlider = document.getElementById('rightMarginSlider');
   const topMarginSlider   = document.getElementById('topMarginSlider');
@@ -682,8 +687,22 @@
     }
   }
 
-  async function buildDividerPage(mergedDoc, sourcePageSize, month, year, segment, bodyFont, boldFont) {
-    const { width, height } = sourcePageSize;
+  // Returns per-page gutter values, mirroring binding side for duplex if enabled.
+  // pageNum is 1-based; odd = front (gutter left), even = back (gutter right).
+  function getPageMargins(pageNum, leftPts, rightPts, topPts, bottomPts, mirrorDuplex) {
+    if (!mirrorDuplex) return { gLeft: leftPts, gRight: rightPts, gTop: topPts, gBottom: bottomPts };
+    const isOdd = pageNum % 2 === 1;
+    return {
+      gLeft:   isOdd ? leftPts  : rightPts,
+      gRight:  isOdd ? rightPts : leftPts,
+      gTop:    topPts,
+      gBottom: bottomPts,
+    };
+  }
+
+  async function buildDividerPage(mergedDoc, srcSize, month, year, segment, bodyFont, boldFont, gLeft, gRight, gTop, gBottom) {
+    const width  = srcSize.width  + gLeft + gRight;
+    const height = srcSize.height + gTop  + gBottom;
     const page = mergedDoc.addPage([width, height]);
     page.node.set(PDFName.of('GCDividerPage'), mergedDoc.context.obj(true));
 
@@ -692,56 +711,58 @@
     const titleText   = `${month} ${year} General Conference`;
     const sessionText = SESSION_NAMES[segment] || '';
 
-    const titleSize   = Math.round(height * 0.032);
-    const sessionSize = Math.round(height * 0.024);
-    const gap = Math.round(height * 0.018);
+    // Scale font sizes to original (unguttered) page height
+    const titleSize   = Math.round(srcSize.height * 0.032);
+    const sessionSize = Math.round(srcSize.height * 0.024);
+    const lineGap     = Math.round(srcSize.height * 0.018);
 
-    const totalBlock = titleSize + gap + sessionSize;
+    const totalBlock = titleSize + lineGap + sessionSize;
     const blockTop   = height / 2 + totalBlock / 2;
 
     const titleWidth   = boldFont.widthOfTextAtSize(titleText, titleSize);
     const sessionWidth = bodyFont.widthOfTextAtSize(sessionText, sessionSize);
 
+    // Center text within the content area (inset by gutter on the binding side)
     page.drawText(titleText, {
-      x: (width - titleWidth) / 2,
+      x: gLeft + (srcSize.width - titleWidth) / 2,
       y: blockTop - titleSize,
       size: titleSize,
       font: boldFont,
       color: rgb(0, 0, 0),
     });
-
     page.drawText(sessionText, {
-      x: (width - sessionWidth) / 2,
-      y: blockTop - titleSize - gap - sessionSize,
+      x: gLeft + (srcSize.width - sessionWidth) / 2,
+      y: blockTop - titleSize - lineGap - sessionSize,
       size: sessionSize,
       font: bodyFont,
       color: rgb(0, 0, 0),
     });
   }
 
-  async function buildReflectionPage(mergedDoc, sourcePageSize, bodyFont, boldFont, questions) {
-    const { width, height } = sourcePageSize;
+  async function buildReflectionPage(mergedDoc, srcSize, bodyFont, boldFont, questions, gLeft, gRight, gTop, gBottom) {
+    const width  = srcSize.width  + gLeft + gRight;
+    const height = srcSize.height + gTop  + gBottom;
     const page = mergedDoc.addPage([width, height]);
 
     page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
 
-    const sideMargin   = 54;
-    const topMargin    = 54;
-    const bottomMargin = 54;
+    const innerPad = 54;
+    const contentX = gLeft + innerPad;
+    const contentW = srcSize.width - innerPad * 2;
 
-    // Subtle "Reflection" header
+    // "Reflection" header centered within the content area
     const headerText = 'Reflection';
     const headerSize = 9;
     const headerW = bodyFont.widthOfTextAtSize(headerText, headerSize);
     page.drawText(headerText, {
-      x: (width - headerW) / 2,
-      y: height - topMargin + 14,
+      x: gLeft + (srcSize.width - headerW) / 2,
+      y: height - gTop - 40,
       size: headerSize,
       font: bodyFont,
       color: rgb(0.65, 0.65, 0.65),
     });
 
-    const available      = height - topMargin - bottomMargin;
+    const available      = srcSize.height - 80;
     const questionSize   = 11;
     const questionLabelH = questionSize + 8;
     const linesPerQ      = 5;
@@ -750,11 +771,11 @@
     const totalBlockH    = questions.length * blockH;
     const gap            = (available - totalBlockH) / (questions.length + 1);
 
-    let y = height - topMargin - gap;
+    let y = height - gTop - 54 - gap;
 
     for (const q of questions) {
       page.drawText(q, {
-        x: sideMargin,
+        x: contentX,
         y: y - questionSize,
         size: questionSize,
         font: boldFont,
@@ -765,13 +786,12 @@
       for (let i = 0; i < linesPerQ; i++) {
         y -= lineSpacing;
         page.drawLine({
-          start: { x: sideMargin, y },
-          end:   { x: width - sideMargin, y },
+          start: { x: contentX, y },
+          end:   { x: contentX + contentW, y },
           thickness: 0.5,
           color: rgb(0.72, 0.72, 0.72),
         });
       }
-
       y -= gap;
     }
   }
@@ -785,10 +805,11 @@
     const year  = yearSelect.value;
     const showReflection = reflectionToggle.checked;
     const questions = [q1Input.value.trim(), q2Input.value.trim(), q3Input.value.trim()].filter(Boolean);
-    const leftPts   = Math.round(parseFloat(leftMarginSlider.value)   * 72);
-    const rightPts  = Math.round(parseFloat(rightMarginSlider.value)  * 72);
-    const topPts    = Math.round(parseFloat(topMarginSlider.value)    * 72);
-    const bottomPts = Math.round(parseFloat(bottomMarginSlider.value) * 72);
+    const leftPts      = Math.round(parseFloat(leftMarginSlider.value)   * 72);
+    const rightPts     = Math.round(parseFloat(rightMarginSlider.value)  * 72);
+    const topPts       = Math.round(parseFloat(topMarginSlider.value)    * 72);
+    const bottomPts    = Math.round(parseFloat(bottomMarginSlider.value) * 72);
+    const mirrorDuplex = duplexToggle.checked;
 
     try {
       const merged = await PDFDocument.create();
@@ -806,15 +827,10 @@
         sourcePageSize   = firstPdf.getPage(0).getSize();
       } catch {}
 
-      // Divider and reflection pages are built at the expanded size
-      const expandedPageSize = {
-        width:  sourcePageSize.width  + leftPts + rightPts,
-        height: sourcePageSize.height + topPts  + bottomPts,
-      };
-
       let lastSeg = null;
       const total = selectedFiles.length;
       let reflectionCount = 0;
+      let docPageCount = 0;
 
       for (let i = 0; i < total; i++) {
         const f = selectedFiles[i];
@@ -822,7 +838,9 @@
         const seg = order ? order[0] : null;
 
         if (seg !== null && seg !== lastSeg && SESSION_NAMES[seg]) {
-          await buildDividerPage(merged, expandedPageSize, month, year, seg, bodyFont, boldFont);
+          docPageCount++;
+          const { gLeft, gRight, gTop, gBottom } = getPageMargins(docPageCount, leftPts, rightPts, topPts, bottomPts, mirrorDuplex);
+          await buildDividerPage(merged, sourcePageSize, month, year, seg, bodyFont, boldFont, gLeft, gRight, gTop, gBottom);
           lastSeg = seg;
         }
 
@@ -831,15 +849,19 @@
         const pages = await merged.copyPages(pdf, pdf.getPageIndices());
         pages.forEach(p => {
           merged.addPage(p);
-          if (leftPts || rightPts || topPts || bottomPts) {
+          docPageCount++;
+          const { gLeft, gRight, gTop, gBottom } = getPageMargins(docPageCount, leftPts, rightPts, topPts, bottomPts, mirrorDuplex);
+          if (gLeft || gRight || gTop || gBottom) {
             const mb = p.getMediaBox();
-            p.setMediaBox(mb.x - leftPts, mb.y - bottomPts, mb.width + leftPts + rightPts, mb.height + topPts + bottomPts);
-            p.setCropBox(mb.x - leftPts, mb.y - bottomPts, mb.width + leftPts + rightPts, mb.height + topPts + bottomPts);
+            p.setMediaBox(mb.x - gLeft, mb.y - gBottom, mb.width + gLeft + gRight, mb.height + gTop + gBottom);
+            p.setCropBox(mb.x - gLeft, mb.y - gBottom, mb.width + gLeft + gRight, mb.height + gTop + gBottom);
           }
         });
 
         if (showReflection && questions.length > 0) {
-          await buildReflectionPage(merged, expandedPageSize, bodyFont, boldFont, questions);
+          docPageCount++;
+          const { gLeft, gRight, gTop, gBottom } = getPageMargins(docPageCount, leftPts, rightPts, topPts, bottomPts, mirrorDuplex);
+          await buildReflectionPage(merged, sourcePageSize, bodyFont, boldFont, questions, gLeft, gRight, gTop, gBottom);
           reflectionCount++;
         }
 
