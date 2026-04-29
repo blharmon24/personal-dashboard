@@ -19,6 +19,7 @@
       --success: #34d399;
       --error: #f87171;
       --divider-color: #7c6fcd;
+      --reflect-color: #4f8ef7;
     }
 
     body {
@@ -53,7 +54,7 @@
     .drop-zone p { color: var(--muted); font-size: 0.95rem; }
     .drop-zone strong { color: var(--accent); }
 
-    /* Session settings panel */
+    /* Settings panel */
     .settings-panel {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -96,6 +97,51 @@
       appearance: auto;
     }
     select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    input[type="text"] {
+      background: var(--hover);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.88rem;
+      padding: 8px 12px;
+      width: 100%;
+    }
+    input[type="text"]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .panel-sep {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 18px 0;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .toggle-row label {
+      font-size: 0.88rem;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .question-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .question-fields .settings-field { width: 100%; }
 
     .font-note {
       margin-top: 14px;
@@ -192,6 +238,14 @@
     .divider-icon { font-size: 1rem; flex-shrink: 0; }
     .divider-text { flex: 1; color: var(--divider-color); font-size: 0.82rem; font-style: italic; }
 
+    /* Reflection row in file list */
+    .reflection-row {
+      background: #131c30 !important;
+      border-left: 3px solid var(--reflect-color) !important;
+    }
+    .reflection-icon { font-size: 1rem; flex-shrink: 0; }
+    .reflection-text { flex: 1; color: var(--reflect-color); font-size: 0.82rem; font-style: italic; }
+
     /* Actions */
     .actions { display: flex; gap: 12px; align-items: center; }
 
@@ -258,11 +312,33 @@
       </div>
       <div class="settings-field">
         <label for="yearSelect">Year</label>
-        <select id="yearSelect" id="yearSelect"></select>
+        <select id="yearSelect"></select>
       </div>
     </div>
     <div class="font-note" id="fontNote">Font: <span>detecting from uploaded PDFs…</span></div>
     <div class="sessions-preview" id="sessionsPreview"></div>
+
+    <hr class="panel-sep">
+
+    <h3>Reflection Pages</h3>
+    <div class="toggle-row">
+      <input type="checkbox" id="reflectionToggle" checked>
+      <label for="reflectionToggle">Add a reflection page after each talk</label>
+    </div>
+    <div class="question-fields" id="questionFields">
+      <div class="settings-field">
+        <label>Question 1</label>
+        <input type="text" id="q1" value="What are the invitations?">
+      </div>
+      <div class="settings-field">
+        <label>Question 2</label>
+        <input type="text" id="q2" value="What are the promised blessings?">
+      </div>
+      <div class="settings-field">
+        <label>Question 3</label>
+        <input type="text" id="q3" value="What was the invitation outcome?">
+      </div>
+    </div>
   </div>
 
   <div id="fileListBox" class="file-list-box" style="display:none">
@@ -298,20 +374,25 @@
   let detectedStandardFont = 'Times-Roman';
 
   // DOM refs
-  const dropZone    = document.getElementById('dropZone');
-  const fileInput   = document.getElementById('fileInput');
-  const fileListBox = document.getElementById('fileListBox');
-  const fileItems   = document.getElementById('fileItems');
-  const fileCount   = document.getElementById('fileCount');
-  const mergeBtn    = document.getElementById('mergeBtn');
-  const clearBtn    = document.getElementById('clearBtn');
-  const statusEl    = document.getElementById('status');
-  const progressBar  = document.getElementById('progressBar');
-  const progressFill = document.getElementById('progressFill');
-  const monthSelect  = document.getElementById('monthSelect');
-  const yearSelect   = document.getElementById('yearSelect');
-  const fontNote     = document.getElementById('fontNote');
+  const dropZone        = document.getElementById('dropZone');
+  const fileInput       = document.getElementById('fileInput');
+  const fileListBox     = document.getElementById('fileListBox');
+  const fileItems       = document.getElementById('fileItems');
+  const fileCount       = document.getElementById('fileCount');
+  const mergeBtn        = document.getElementById('mergeBtn');
+  const clearBtn        = document.getElementById('clearBtn');
+  const statusEl        = document.getElementById('status');
+  const progressBar     = document.getElementById('progressBar');
+  const progressFill    = document.getElementById('progressFill');
+  const monthSelect     = document.getElementById('monthSelect');
+  const yearSelect      = document.getElementById('yearSelect');
+  const fontNote        = document.getElementById('fontNote');
   const sessionsPreview = document.getElementById('sessionsPreview');
+  const reflectionToggle = document.getElementById('reflectionToggle');
+  const questionFields   = document.getElementById('questionFields');
+  const q1Input          = document.getElementById('q1');
+  const q2Input          = document.getElementById('q2');
+  const q3Input          = document.getElementById('q3');
 
   // Populate year dropdown
   const currentYear = new Date().getFullYear();
@@ -323,7 +404,14 @@
     yearSelect.appendChild(opt);
   }
 
-  // Refresh preview when month/year changes
+  // Show/hide question fields when toggle changes
+  reflectionToggle.addEventListener('change', () => {
+    questionFields.style.opacity = reflectionToggle.checked ? '1' : '0.4';
+    questionFields.style.pointerEvents = reflectionToggle.checked ? '' : 'none';
+    render();
+  });
+
+  // Refresh file list preview when month/year changes
   monthSelect.addEventListener('change', render);
   yearSelect.addEventListener('change', render);
 
@@ -416,19 +504,18 @@
 
   function mapToStandardFont(name) {
     const n = name.toLowerCase();
-    const isBold    = n.includes('bold') || n.includes('-bd') || n.includes('demi');
-    const isItalic  = n.includes('italic') || n.includes('oblique') || n.includes('-it');
-    const isSans    = n.includes('helvetica') || n.includes('arial') || n.includes('sans') || n.includes('myriad') || n.includes('gill');
-    const isMono    = n.includes('courier') || n.includes('mono') || n.includes('consolas');
+    const isBold   = n.includes('bold') || n.includes('-bd') || n.includes('demi');
+    const isItalic = n.includes('italic') || n.includes('oblique') || n.includes('-it');
+    const isSans   = n.includes('helvetica') || n.includes('arial') || n.includes('sans') || n.includes('myriad') || n.includes('gill');
+    const isMono   = n.includes('courier') || n.includes('mono') || n.includes('consolas');
 
-    if (isMono)  return isBold ? 'Courier-Bold' : 'Courier';
+    if (isMono) return isBold ? 'Courier-Bold' : 'Courier';
     if (isSans) {
       if (isBold && isItalic) return 'Helvetica-BoldOblique';
       if (isBold)             return 'Helvetica-Bold';
       if (isItalic)           return 'Helvetica-Oblique';
       return 'Helvetica';
     }
-    // Serif (Times, Minion, Garamond, Palatino, etc.)
     if (isBold && isItalic) return 'Times-BoldItalic';
     if (isBold)             return 'Times-Bold';
     if (isItalic)           return 'Times-Italic';
@@ -444,6 +531,7 @@
 
     const month = monthSelect.value;
     const year  = yearSelect.value;
+    const showReflection = reflectionToggle.checked;
 
     fileListBox.style.display = '';
     fileCount.textContent = `${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''} — merge order:`;
@@ -472,6 +560,13 @@
         <span class="file-name">${f.name}</span>
         ${tag}
       </li>`;
+
+      if (showReflection) {
+        html += `<li class="reflection-row">
+          <span class="reflection-icon">✏️</span>
+          <span class="reflection-text">Reflection page</span>
+        </li>`;
+      }
     }
 
     fileItems.innerHTML = html;
@@ -496,17 +591,15 @@
   async function buildDividerPage(mergedDoc, sourcePageSize, month, year, segment, bodyFont, boldFont) {
     const { width, height } = sourcePageSize;
     const page = mergedDoc.addPage([width, height]);
-    // Marker so the GC Formatting tool knows to skip margin processing on this page
     page.node.set(PDFName.of('GCDividerPage'), mergedDoc.context.obj(true));
 
-    // White background
     page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
 
     const titleText   = `${month} ${year} General Conference`;
     const sessionText = SESSION_NAMES[segment] || '';
 
-    const titleSize   = Math.round(height * 0.032);  // ~24pt on letter
-    const sessionSize = Math.round(height * 0.024);  // ~18pt on letter
+    const titleSize   = Math.round(height * 0.032);
+    const sessionSize = Math.round(height * 0.024);
     const gap = Math.round(height * 0.018);
 
     const totalBlock = titleSize + gap + sessionSize;
@@ -532,6 +625,63 @@
     });
   }
 
+  async function buildReflectionPage(mergedDoc, sourcePageSize, bodyFont, boldFont, questions) {
+    const { width, height } = sourcePageSize;
+    const page = mergedDoc.addPage([width, height]);
+
+    page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
+
+    const sideMargin   = 54;
+    const topMargin    = 54;
+    const bottomMargin = 54;
+
+    // Subtle "Reflection" header
+    const headerText = 'Reflection';
+    const headerSize = 9;
+    const headerW = bodyFont.widthOfTextAtSize(headerText, headerSize);
+    page.drawText(headerText, {
+      x: (width - headerW) / 2,
+      y: height - topMargin + 14,
+      size: headerSize,
+      font: bodyFont,
+      color: rgb(0.65, 0.65, 0.65),
+    });
+
+    const available      = height - topMargin - bottomMargin;
+    const questionSize   = 11;
+    const questionLabelH = questionSize + 8;
+    const linesPerQ      = 5;
+    const lineSpacing    = 28;
+    const blockH         = questionLabelH + linesPerQ * lineSpacing;
+    const totalBlockH    = questions.length * blockH;
+    const gap            = (available - totalBlockH) / (questions.length + 1);
+
+    let y = height - topMargin - gap;
+
+    for (const q of questions) {
+      page.drawText(q, {
+        x: sideMargin,
+        y: y - questionSize,
+        size: questionSize,
+        font: boldFont,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+      y -= questionLabelH;
+
+      for (let i = 0; i < linesPerQ; i++) {
+        y -= lineSpacing;
+        page.drawLine({
+          start: { x: sideMargin, y },
+          end:   { x: width - sideMargin, y },
+          thickness: 0.5,
+          color: rgb(0.72, 0.72, 0.72),
+        });
+      }
+
+      y -= gap;
+    }
+  }
+
   mergeBtn.addEventListener('click', async () => {
     mergeBtn.disabled = true;
     setStatus('Merging…', 'working');
@@ -539,20 +689,19 @@
 
     const month = monthSelect.value;
     const year  = yearSelect.value;
+    const showReflection = reflectionToggle.checked;
+    const questions = [q1Input.value.trim(), q2Input.value.trim(), q3Input.value.trim()].filter(Boolean);
 
     try {
       const merged = await PDFDocument.create();
 
-      // Embed fonts for divider pages
       const bodyFont = await merged.embedFont(detectedStandardFont);
-      // Pick matching bold variant
       const boldVariant = detectedStandardFont.includes('Helvetica') ? 'Helvetica-Bold'
                         : detectedStandardFont.includes('Courier')   ? 'Courier-Bold'
                         : 'Times-Bold';
       const boldFont = await merged.embedFont(boldVariant);
 
-      // Determine page size from first file
-      let sourcePageSize = { width: 612, height: 792 }; // default letter
+      let sourcePageSize = { width: 612, height: 792 };
       try {
         const firstBytes = await selectedFiles[0].arrayBuffer();
         const firstPdf   = await PDFDocument.load(firstBytes);
@@ -561,13 +710,13 @@
 
       let lastSeg = null;
       const total = selectedFiles.length;
+      let reflectionCount = 0;
 
       for (let i = 0; i < total; i++) {
         const f = selectedFiles[i];
         const order = parseOrder(f.name);
         const seg = order ? order[0] : null;
 
-        // Insert divider page on segment change
         if (seg !== null && seg !== lastSeg && SESSION_NAMES[seg]) {
           await buildDividerPage(merged, sourcePageSize, month, year, seg, bodyFont, boldFont);
           lastSeg = seg;
@@ -577,6 +726,11 @@
         const pdf   = await PDFDocument.load(bytes);
         const pages = await merged.copyPages(pdf, pdf.getPageIndices());
         pages.forEach(p => merged.addPage(p));
+
+        if (showReflection && questions.length > 0) {
+          await buildReflectionPage(merged, sourcePageSize, bodyFont, boldFont, questions);
+          reflectionCount++;
+        }
 
         setProgress(Math.round(((i + 1) / total) * 90));
       }
@@ -595,7 +749,11 @@
       const dividerCount = [...new Set(
         selectedFiles.map(f => parseOrder(f.name)?.[0]).filter(s => s && SESSION_NAMES[s])
       )].length;
-      setStatus(`Done! ${total} files + ${dividerCount} divider page${dividerCount !== 1 ? 's' : ''} merged.`, 'success');
+
+      let statusParts = [`${total} file${total !== 1 ? 's' : ''}`];
+      if (dividerCount) statusParts.push(`${dividerCount} divider page${dividerCount !== 1 ? 's' : ''}`);
+      if (reflectionCount) statusParts.push(`${reflectionCount} reflection page${reflectionCount !== 1 ? 's' : ''}`);
+      setStatus(`Done! ${statusParts.join(' + ')} merged.`, 'success');
     } catch (err) {
       setStatus(`Error: ${err.message}`, 'error');
     }
