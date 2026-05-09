@@ -7,7 +7,10 @@
       "WebFetch(domain:results.runnercard.com)",
       "WebFetch(domain:www.runnercard.com)",
       "WebFetch(domain:www.athletic.net)",
-      "Bash(supabase functions *)"
+      "Bash(supabase functions *)",
+      "WebFetch(domain:blharmon24.github.io)",
+      "Bash(gh api *)",
+      "mcp__claude_ai_Google_Drive__read_file_content"
     ]
   }
 }

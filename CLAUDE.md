@@ -231,14 +231,3 @@ For Brian's parents who manage 12–15 rental properties. Files: `property-manag
 **Theme:** Shared `localStorage` key `'theme'`. Both pm pages have `#theme-toggle` in header.
 
 **⚠ PENDING — Before showing the app to Brian's parents:** Create Supabase Auth accounts. Go to Supabase dashboard → Authentication → Users → Add user → enter email + password. Need one account for parents (shared), one for Brian. Neither has been created yet.
-
-### Fortnite Tracker
-File: `fortnite.html`. Sidebar nav entry under "My Projects" (🎮 icon). Tracks multiple Fortnite accounts by Epic username. Current version: **v2026.05.09.1**.
-
-**API:** Tracker.gg public API (`https://public-api.tracker.gg/v2/fortnite/standard/profile/epic/{username}`) with `TRN-Api-Key` header. Free key at tracker.gg/developers (1,000 req/day). Key stored in `localStorage` key `fn_trn_key`. Accounts stored in `localStorage` key `fn_accounts` (JSON array of usernames).
-
-**Segments:** Response has `data.data.segments[]` array. Filter to `type === 'playlist'`, check `attributes.playlistId` contains `'rank'` or `'competitive'`. Reload ranked segments contain `'reload'` in the playlistId. Rank info extracted from `stats.rank` (or fallback keys `rankingType`, `ranked`, `competitive`). `displayValue` is e.g. "Gold III"; `metadata.rankName` is the tier; `metadata.iconUrl` is the badge image.
-
-**Rank badge colors:** Bronze (#fb923c), Silver (#cbd5e1), Gold (#fbbf24), Platinum (#2dd4bf), Diamond (#60a5fa), Elite (#a78bfa), Champion (#f87171), Unreal (#e879f9). Applied as colored pill badges.
-
-**Theme:** Shares `localStorage` key `'theme'` with rest of dashboard. Anti-flash script in `<head>` applies theme before render.
