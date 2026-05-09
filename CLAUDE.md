@@ -95,7 +95,9 @@ File: `kids-running.html`. Tracks Luke and Tanner Harmon's race results. Supabas
 
 **kids_results schema:** `id`, `athlete_id`, `sporttrax_result_id`, `athleticnet_result_id` (both nullable/unique), `meet_name`, `race_date`, `event_name`, `mark`, `place`, `is_pr`, `is_relay`.
 
-**RLS policies on kids_results:** anon SELECT allowed, anon DELETE allowed (password-protected in UI). Same SELECT policy on kids_athletes.
+**RLS policies on kids_results:** No-role SELECT (`USING (true)` — public access, no login required). Authenticated DELETE only. Same no-role SELECT on kids_athletes. The `sb_publishable_` anon key no longer maps to the `anon` role in RLS — this was root cause of a blank page bug fixed April 2026.
+
+**SportTrax sync (`sync-sporttrax` Edge Function):** Uses HTML fetch to discover the current Inertia.js asset version from `data-page` attribute, then uses that version for season API calls. Do NOT hardcode `X-Inertia-Version` — SportTrax deploys new assets periodically and a stale hash causes HTTP 409 (Inertia version mismatch), which silently blocks all syncs. Local reference copy of the Edge Function code: `sync-sporttrax.ts` (not deployed — source of truth is in Supabase dashboard).
 
 **Athletic.net sync approach:** The `sync-athleticnet` Edge Function is dead — Cloudflare blocks all Supabase server IPs with 403 regardless of auth headers. Sync is done via a bookmarklet (`anet-sync.html`) that runs inside the user's authenticated browser session on athletic.net (same-origin, bypasses Cloudflare). The Edge Function code and secrets (`ANET_TOKEN`, `ANET_COOKIE`) in Supabase are unused dead code.
 
@@ -155,7 +157,7 @@ File: `salary-tracker.html`. Sidebar nav entry under "My Projects" (💼 icon). 
 
 **Auto-scroll to current year:** `scrollToCurrentYear()` runs after `sizeTableScroll()` on init. Uses `getBoundingClientRect()` to position the current year row just below the sticky thead: `ts.scrollTop = tr.getBoundingClientRect().top - ts.getBoundingClientRect().top + ts.scrollTop - theadHeight`. The `theadHeight` offset is critical — without it the scroll lands one row too far (thead covers the target row).
 
-**Version number:** Both `index.html` (sidebar footer) and `salary-tracker.html` (page header) now show the version. Current version: **v2026.04.26.26**. Always bump both files on every push.
+**Version number:** Both `index.html` (sidebar footer) and `salary-tracker.html` (page header) now show the version. Current version: **v2026.04.26.29**. Always bump **all affected files** on every commit — including `kids-running.html`, `property-management.html`, `property-detail.html` when those files change. Never forget this — Brian will call it out if missed.
 
 **Chart retirement zone shading:** Custom Chart.js inline plugin (`id: 'retireShade'`) in the `plugins` array of the Chart config (not `options.plugins`). Uses `beforeDatasetsDraw` to draw a green fill (`rgba(74,222,128,0.07)`) from 2032 to the right edge, plus a green dashed vertical line at 2032. Finds 2032 by searching `chart.data.labels.indexOf('2032–33')` — this works correctly at any zoom level. If `chartWindow.start > 2032` and the label isn't found, shades the entire chart area.
 
@@ -229,3 +231,14 @@ For Brian's parents who manage 12–15 rental properties. Files: `property-manag
 **Theme:** Shared `localStorage` key `'theme'`. Both pm pages have `#theme-toggle` in header.
 
 **⚠ PENDING — Before showing the app to Brian's parents:** Create Supabase Auth accounts. Go to Supabase dashboard → Authentication → Users → Add user → enter email + password. Need one account for parents (shared), one for Brian. Neither has been created yet.
+
+### Fortnite Tracker
+File: `fortnite.html`. Sidebar nav entry under "My Projects" (🎮 icon). Tracks multiple Fortnite accounts by Epic username. Current version: **v2026.05.09.1**.
+
+**API:** Tracker.gg public API (`https://public-api.tracker.gg/v2/fortnite/standard/profile/epic/{username}`) with `TRN-Api-Key` header. Free key at tracker.gg/developers (1,000 req/day). Key stored in `localStorage` key `fn_trn_key`. Accounts stored in `localStorage` key `fn_accounts` (JSON array of usernames).
+
+**Segments:** Response has `data.data.segments[]` array. Filter to `type === 'playlist'`, check `attributes.playlistId` contains `'rank'` or `'competitive'`. Reload ranked segments contain `'reload'` in the playlistId. Rank info extracted from `stats.rank` (or fallback keys `rankingType`, `ranked`, `competitive`). `displayValue` is e.g. "Gold III"; `metadata.rankName` is the tier; `metadata.iconUrl` is the badge image.
+
+**Rank badge colors:** Bronze (#fb923c), Silver (#cbd5e1), Gold (#fbbf24), Platinum (#2dd4bf), Diamond (#60a5fa), Elite (#a78bfa), Champion (#f87171), Unreal (#e879f9). Applied as colored pill badges.
+
+**Theme:** Shares `localStorage` key `'theme'` with rest of dashboard. Anti-flash script in `<head>` applies theme before render.
