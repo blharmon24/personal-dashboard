@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --bg:#0f1117; --surface:#1a1d27; --surface2:#232635; --accent:#4f8ef7;
+  --text:#e2e8f0; --text-muted:#94a3b8; --border:#2d3250;
+  --positive:#4ade80; --negative:#f87171; --warn:#fbbf24;
+}
+[data-theme="light"] {
+  --bg:#f0f2f5; --surface:#ffffff; --surface2:#e8edf3; --accent:#2563eb;
+  --text:#1e293b; --text-muted:#64748b; --border:#cbd5e1;
+  --positive:#16a34a; --negative:#dc2626; --warn:#d97706;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh;}
+
+/* LOGIN */
+#login-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:200;}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:36px 40px;width:360px;}
+.login-box h2{font-size:1.2rem;margin-bottom:4px;}
+.login-box p{color:var(--text-muted);font-size:12px;margin-bottom:24px;}
+#login-error{color:var(--negative);font-size:12px;margin-top:10px;min-height:16px;}
+
+/* FORMS */
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;font-family:inherit;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:2px solid var(--accent);border-color:var(--accent);}
+.form-group textarea{resize:vertical;min-height:60px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;font-size:13px;font-family:inherit;font-weight:500;cursor:pointer;border:none;transition:opacity .15s;}
+.btn-primary{background:var(--accent);color:#fff;} .btn-primary:hover{opacity:.88;}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--accent);}
+.btn-danger{background:var(--negative);color:#fff;}
+.btn-full{width:100%;justify-content:center;}
+.btn-sm{padding:4px 10px;font-size:11px;}
+.btn-xs{padding:3px 8px;font-size:10px;}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;}
+header h1{font-size:1.05rem;font-weight:600;flex:1;}
+.header-user{font-size:11px;color:var(--text-muted);}
+.version{font-size:11px;color:var(--text-muted);}
+.back-link{display:inline-flex;align-items:center;color:var(--text-muted);text-decoration:none;padding:4px;}
+.back-link:hover{color:var(--text);}
+.theme-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:13px;}
+
+/* STATS BAR */
+.stats-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;gap:0;flex-wrap:wrap;}
+.stat-item{display:flex;flex-direction:column;gap:2px;padding:0 20px;}
+.stat-item:first-child{padding-left:0;}
+.stat-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;white-space:nowrap;}
+.stat-val{font-size:1.1rem;font-weight:700;white-space:nowrap;}
+.stat-divider{width:1px;background:var(--border);align-self:stretch;flex-shrink:0;}
+.c-pos{color:var(--positive);} .c-neg{color:var(--negative);} .c-warn{color:var(--warn);}
+
+/* TABS */
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:0;}
+.tab-btn{background:none;border:none;border-bottom:2px solid transparent;padding:10px 16px;font-size:13px;font-family:inherit;color:var(--text-muted);cursor:pointer;font-weight:500;transition:color .15s,border-color .15s;}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-btn:hover:not(.active){color:var(--text);}
+
+/* MAIN */
+.main{padding:20px 24px;}
+.section-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.section-toolbar h2{font-size:14px;font-weight:600;color:var(--text-muted);}
+
+/* CARDS GRID */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+
+/* VEHICLE CARD */
+.maint-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.maint-card-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.vehicle-title{font-size:14px;font-weight:700;line-height:1.3;}
+.vehicle-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.card-actions{display:flex;gap:6px;flex-shrink:0;}
+
+/* ALERT BADGES */
+.badges-row{padding:8px 16px;display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--border);}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.05em;display:inline-flex;align-items:center;gap:3px;}
+.badge-overdue{background:rgba(248,113,113,.15);color:var(--negative);}
+.badge-soon{background:rgba(251,191,36,.15);color:var(--warn);}
+.badge-ok{background:rgba(74,222,128,.1);color:var(--positive);}
+.badge-cat{background:var(--surface2);color:var(--text-muted);}
+.badge-warranty-warn{background:rgba(251,191,36,.15);color:var(--warn);}
+.badge-warranty-bad{background:rgba(248,113,113,.15);color:var(--negative);}
+.badge-warranty-ok{background:rgba(74,222,128,.1);color:var(--positive);}
+
+/* RECORDS LIST */
+.records-list{padding:8px 16px;}
+.record-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);}
+.record-row:last-child{border-bottom:none;}
+.record-date{font-size:11px;color:var(--text-muted);width:72px;flex-shrink:0;}
+.record-type{font-size:12px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.record-detail{font-size:11px;color:var(--text-muted);}
+.record-cost{font-size:11px;color:var(--text-muted);flex-shrink:0;}
+.record-del{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 4px;flex-shrink:0;opacity:.6;}
+.record-del:hover{opacity:1;color:var(--negative);}
+.card-footer-bar{padding:10px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--surface2);}
+.view-all-link{font-size:11px;color:var(--accent);cursor:pointer;text-decoration:none;background:none;border:none;font-family:inherit;padding:0;}
+.view-all-link:hover{text-decoration:underline;}
+
+/* CATEGORY FILTER */
+.cat-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.cat-pill{background:var(--surface);border:1px solid var(--border);color:var(--text-muted);padding:4px 14px;border-radius:16px;font-size:12px;cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s;}
+.cat-pill.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* WARRANTY BADGE */
+.warranty-row{padding:6px 16px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+.modal-lg{width:600px;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.modal-header h3{font-size:1rem;font-weight:600;}
+.modal-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+.modal-footer-split{display:flex;gap:8px;justify-content:space-between;margin-top:20px;}
+.modal-error{color:var(--negative);font-size:12px;margin-top:8px;min-height:16px;}
+
+/* HISTORY TABLE */
+.hist-table{width:100%;border-collapse:collapse;margin-top:4px;}
+.hist-table th{font-size:10px;font-weight:600;color:var(--text-muted);padding:6px 8px;text-transform:uppercase;letter-spacing:.04em;text-align:left;border-bottom:1px solid var(--border);}
+.hist-table td{padding:8px 8px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:top;}
+.hist-table tbody tr:last-child td{border-bottom:none;}
+.hist-table tbody tr:hover td{background:rgba(255,255,255,.03);}
+[data-theme="light"] .hist-table tbody tr:hover td{background:rgba(0,0,0,.02);}
+
+/* EMPTY / LOADING */
+.loading{padding:40px;text-align:center;color:var(--text-muted);}
+.empty-state{padding:40px 20px;text-align:center;color:var(--text-muted);}
+.empty-state p{margin-bottom:12px;}
+.no-records{padding:12px 16px;font-size:11px;color:var(--text-muted);font-style:italic;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-overlay">
+  <div class="login-box">
+    <h2>Maintenance Tracker</h2>
+    <p>Sign in to access your maintenance records</p>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="email@example.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+
+<header>
+  <a href="index.html" class="back-link" title="Dashboard">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+  </a>
+  <h1>🔧 Maintenance Tracker</h1>
+  <span class="version">v2026.05.25.1</span>
+  <span class="header-user" id="header-user"></span>
+  <button class="btn btn-secondary btn-sm" onclick="doLogout()">Sign Out</button>
+  <button class="theme-btn" id="theme-toggle">🌙</button>
+</header>
+
+<div class="stats-bar">
+  <div class="stat-item">
+    <span class="stat-label">Vehicles</span>
+    <span class="stat-val" id="s-vehicles">—</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <span class="stat-label">Overdue</span>
+    <span class="stat-val c-neg" id="s-overdue">—</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <span class="stat-label">Due Soon</span>
+    <span class="stat-val c-warn" id="s-soon">—</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <span class="stat-label">Home Items</span>
+    <span class="stat-val" id="s-items">—</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-item">
+    <span class="stat-label">Warranties Expiring</span>
+    <span class="stat-val c-warn" id="s-warranties">—</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" id="tab-vehicles-btn" onclick="setTab('vehicles')">🚗 Vehicles</button>
+  <button class="tab-btn" id="tab-home-btn" onclick="setTab('home')">🏠 Home</button>
+</div>
+
+<!-- VEHICLES TAB -->
+<div id="tab-vehicles" class="main">
+  <div class="section-toolbar">
+    <h2 id="vehicles-count-label">Vehicles</h2>
+    <button class="btn btn-primary" onclick="openAddVehicle()">+ Add Vehicle</button>
+  </div>
+  <div class="cards-grid" id="vehicles-grid">
+    <div class="loading">Loading…</div>
+  </div>
+</div>
+
+<!-- HOME TAB -->
+<div id="tab-home" class="main" style="display:none">
+  <div class="section-toolbar">
+    <h2 id="home-count-label">Home Items</h2>
+    <button class="btn btn-primary" onclick="openAddItem()">+ Add Item</button>
+  </div>
+  <div class="cat-filter" id="cat-filter">
+    <button class="cat-pill active" data-cat="" onclick="setCat(this,'')">All</button>
+    <button class="cat-pill" data-cat="HVAC / Filters" onclick="setCat(this,'HVAC / Filters')">HVAC / Filters</button>
+    <button class="cat-pill" data-cat="Appliances" onclick="setCat(this,'Appliances')">Appliances</button>
+    <button class="cat-pill" data-cat="Roof / Exterior" onclick="setCat(this,'Roof / Exterior')">Roof / Exterior</button>
+    <button class="cat-pill" data-cat="Plumbing / Water" onclick="setCat(this,'Plumbing / Water')">Plumbing / Water</button>
+  </div>
+  <div class="cards-grid" id="home-grid">
+    <div class="loading">Loading…</div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<!-- MODAL: Add/Edit Vehicle -->
+<div class="modal-overlay hidden" id="modal-vehicle">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-vehicle-title">Add Vehicle</h3>
+      <button class="modal-close" onclick="closeModal('modal-vehicle')">✕</button>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group">
+        <label>Year</label>
+        <input type="number" id="v-year" placeholder="2020" min="1900" max="2099">
+      </div>
+      <div class="form-group">
+        <label>Make *</label>
+        <input type="text" id="v-make" placeholder="Toyota">
+      </div>
+      <div class="form-group">
+        <label>Model *</label>
+        <input type="text" id="v-model" placeholder="Camry">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nickname / Label</label>
+        <input type="text" id="v-nickname" placeholder="Brian's Car">
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <input type="text" id="v-color" placeholder="Silver">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="v-notes" rows="2"></textarea>
+    </div>
+    <div class="modal-error" id="vehicle-error"></div>
+    <div class="modal-footer-split">
+      <button class="btn btn-danger btn-sm" id="v-delete-btn" onclick="deleteVehicle()" style="display:none">Delete Vehicle</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-vehicle')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveVehicle()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Vehicle Service Record -->
+<div class="modal-overlay hidden" id="modal-vrecord">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-vrecord-title">Add Service Record</h3>
+      <button class="modal-close" onclick="closeModal('modal-vrecord')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Service Type *</label>
+      <select id="vr-type" onchange="onServiceTypeChange()">
+        <option value="">Select type…</option>
+        <option value="Oil Change">Oil Change</option>
+        <option value="Tire Rotation">Tire Rotation</option>
+        <option value="Brake Service">Brake Service</option>
+        <option value="Air Filter">Air Filter</option>
+        <option value="Battery">Battery</option>
+        <option value="Transmission Service">Transmission Service</option>
+        <option value="Registration">Registration</option>
+        <option value="Inspection / Emissions">Inspection / Emissions</option>
+        <option value="Windshield">Windshield</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div id="vr-other-group" class="form-group" style="display:none">
+      <label>Describe Service</label>
+      <input type="text" id="vr-other-desc" placeholder="e.g. Coolant flush">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Service Date *</label>
+        <input type="date" id="vr-date" onchange="autoNextDue()">
+      </div>
+      <div class="form-group">
+        <label>Mileage</label>
+        <input type="number" id="vr-mileage" placeholder="45000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Cost ($)</label>
+        <input type="number" id="vr-cost" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Next Due Date</label>
+        <input type="date" id="vr-next-due">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="vr-notes" rows="2"></textarea>
+    </div>
+    <div class="modal-error" id="vrecord-error"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-vrecord')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveVehicleRecord()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Vehicle History (all records) -->
+<div class="modal-overlay hidden" id="modal-vhistory">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="modal-vhistory-title">Service History</h3>
+      <button class="modal-close" onclick="closeModal('modal-vhistory')">✕</button>
+    </div>
+    <div id="vhistory-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-vhistory')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add/Edit Home Item -->
+<div class="modal-overlay hidden" id="modal-item">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-item-title">Add Home Item</h3>
+      <button class="modal-close" onclick="closeModal('modal-item')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Item Name *</label>
+      <input type="text" id="i-name" placeholder="e.g. Furnace, Refrigerator, Roof">
+    </div>
+    <div class="form-group">
+      <label>Category *</label>
+      <select id="i-category">
+        <option value="">Select category…</option>
+        <option value="HVAC / Filters">HVAC / Filters</option>
+        <option value="Appliances">Appliances</option>
+        <option value="Roof / Exterior">Roof / Exterior</option>
+        <option value="Plumbing / Water">Plumbing / Water</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Purchase / Install Date</label>
+        <input type="date" id="i-purchase">
+      </div>
+      <div class="form-group">
+        <label>Warranty Expiration</label>
+        <input type="date" id="i-warranty">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="i-notes" rows="2"></textarea>
+    </div>
+    <div class="modal-error" id="item-error"></div>
+    <div class="modal-footer-split">
+      <button class="btn btn-danger btn-sm" id="i-delete-btn" onclick="deleteItem()" style="display:none">Delete Item</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-item')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveItem()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Home Service Record -->
+<div class="modal-overlay hidden" id="modal-irecord">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-irecord-title">Add Service Record</h3>
+      <button class="modal-close" onclick="closeModal('modal-irecord')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Description *</label>
+      <input type="text" id="ir-desc" placeholder="e.g. Replaced filter, Annual inspection">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Service Date *</label>
+        <input type="date" id="ir-date">
+      </div>
+      <div class="form-group">
+        <label>Cost ($)</label>
+        <input type="number" id="ir-cost" placeholder="0.00" step="0.01">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Next Due Date</label>
+      <input type="date" id="ir-next-due">
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="ir-notes" rows="2"></textarea>
+    </div>
+    <div class="modal-error" id="irecord-error"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-irecord')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveItemRecord()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Home Item History -->
+<div class="modal-overlay hidden" id="modal-ihistory">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="modal-ihistory-title">Service History</h3>
+      <button class="modal-close" onclick="closeModal('modal-ihistory')">✕</button>
+    </div>
+    <div id="ihistory-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-ihistory')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ebdsxcbpnhevzkbpdxry.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_2chleZ28vhYAQqpW0RaNeg_0DYo_1v4';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+const SOON_DAYS = 30;
+const WARRANTY_WARN_DAYS = 60;
+const WARRANTY_CRIT_DAYS = 30;
+
+// Months to add for auto next-due by service type
+const SERVICE_INTERVALS = {
+  'Oil Change': 6,
+  'Tire Rotation': 6,
+  'Air Filter': 12,
+  'Registration': 12,
+  'Inspection / Emissions': 12,
+};
+
+let vehicles = [], vehicleRecords = [];
+let homeItems = [], homeRecords = [];
+let editVehicleId = null, editItemId = null;
+let addRecordVehicleId = null, addRecordItemId = null;
+let activeCat = '';
+let currentTab = 'vehicles';
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) onLogin(session.user);
+  else document.getElementById('login-overlay').style.display = 'flex';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pwd = document.getElementById('login-password').value;
+  document.getElementById('login-error').textContent = '';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pwd });
+  if (error) { document.getElementById('login-error').textContent = error.message; return; }
+  onLogin(data.user);
+}
+
+function onLogin(user) {
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('header-user').textContent = user.email;
+  loadData();
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+async function loadData() {
+  const [vRes, vrRes, iRes, irRes] = await Promise.all([
+    sb.from('maint_vehicles').select('*').order('created_at'),
+    sb.from('maint_vehicle_records').select('*').order('service_date', { ascending: false }),
+    sb.from('maint_home_items').select('*').order('category,name'),
+    sb.from('maint_home_records').select('*').order('service_date', { ascending: false }),
+  ]);
+  vehicles = vRes.data || [];
+  vehicleRecords = vrRes.data || [];
+  homeItems = iRes.data || [];
+  homeRecords = irRes.data || [];
+  updateStats();
+  renderVehicles();
+  renderHome();
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  // latest record per (vehicle, service_type)
+  let overdue = 0, soon = 0;
+  vehicles.forEach(v => {
+    const recs = vehicleRecords.filter(r => r.vehicle_id === v.id && r.next_due_date);
+    // group by service_type, take first (most recent due to desc order)
+    const seen = {};
+    recs.forEach(r => { if (!seen[r.service_type]) seen[r.service_type] = r; });
+    Object.values(seen).forEach(r => {
+      const s = alertStatus(r.next_due_date);
+      if (s === 'overdue') overdue++;
+      else if (s === 'soon') soon++;
+    });
+  });
+  // home items: latest record per item
+  homeItems.forEach(item => {
+    const rec = homeRecords.find(r => r.item_id === item.id && r.next_due_date);
+    if (rec) {
+      const s = alertStatus(rec.next_due_date);
+      if (s === 'overdue') overdue++;
+      else if (s === 'soon') soon++;
+    }
+  });
+  const warrantiesExpiring = homeItems.filter(i => {
+    if (!i.warranty_expiration) return false;
+    const d = new Date(i.warranty_expiration + 'T00:00:00');
+    const diff = Math.ceil((d - TODAY) / 86400000);
+    return diff >= 0 && diff <= WARRANTY_WARN_DAYS;
+  }).length;
+
+  document.getElementById('s-vehicles').textContent = vehicles.length;
+  document.getElementById('s-overdue').textContent = overdue;
+  document.getElementById('s-soon').textContent = soon;
+  document.getElementById('s-items').textContent = homeItems.length;
+  document.getElementById('s-warranties').textContent = warrantiesExpiring;
+}
+
+function alertStatus(next_due_date) {
+  if (!next_due_date) return null;
+  const d = new Date(next_due_date + 'T00:00:00');
+  const diff = Math.ceil((d - TODAY) / 86400000);
+  if (diff < 0) return 'overdue';
+  if (diff <= SOON_DAYS) return 'soon';
+  return 'ok';
+}
+
+function alertBadgeHtml(label, status) {
+  if (!status) return '';
+  const cls = status === 'overdue' ? 'badge-overdue' : status === 'soon' ? 'badge-soon' : 'badge-ok';
+  const icon = status === 'overdue' ? '⚠' : status === 'soon' ? '⏰' : '✓';
+  return `<span class="badge ${cls}">${icon} ${label}</span>`;
+}
+
+function warrantyBadgeHtml(date_str) {
+  if (!date_str) return '';
+  const d = new Date(date_str + 'T00:00:00');
+  const diff = Math.ceil((d - TODAY) / 86400000);
+  if (diff < 0) return `<span class="badge badge-warranty-bad">⚠ Warranty Expired</span>`;
+  if (diff <= WARRANTY_CRIT_DAYS) return `<span class="badge badge-warranty-bad">⚠ Warranty Exp. ${fmtDate(date_str)}</span>`;
+  if (diff <= WARRANTY_WARN_DAYS) return `<span class="badge badge-warranty-warn">⏰ Warranty Exp. ${fmtDate(date_str)}</span>`;
+  return `<span class="badge badge-warranty-ok">✓ Warranty ${fmtDate(date_str)}</span>`;
+}
+
+// ── RENDER VEHICLES ───────────────────────────────────────────────────────────
+function renderVehicles() {
+  const grid = document.getElementById('vehicles-grid');
+  document.getElementById('vehicles-count-label').textContent = `Vehicles (${vehicles.length})`;
+  if (!vehicles.length) {
+    grid.innerHTML = `<div class="empty-state"><p>No vehicles yet.</p><button class="btn btn-primary" onclick="openAddVehicle()">+ Add Vehicle</button></div>`;
+    return;
+  }
+  grid.innerHTML = vehicles.map(v => vehicleCardHtml(v)).join('');
+}
+
+function vehicleCardHtml(v) {
+  const recs = vehicleRecords.filter(r => r.vehicle_id === v.id);
+  // latest record per service type (for alert badges)
+  const latestPerType = {};
+  recs.forEach(r => { if (!latestPerType[r.service_type]) latestPerType[r.service_type] = r; });
+
+  const badgesHtml = Object.entries(latestPerType)
+    .filter(([, r]) => r.next_due_date)
+    .map(([type, r]) => alertBadgeHtml(type, alertStatus(r.next_due_date)))
+    .filter(Boolean).join('');
+
+  const recent = recs.slice(0, 3);
+  const moreCount = recs.length - 3;
+
+  const recsHtml = recent.length
+    ? recent.map(r => `
+      <div class="record-row">
+        <span class="record-date">${fmtDate(r.service_date)}</span>
+        <span class="record-type">${esc(r.service_type)}</span>
+        ${r.mileage ? `<span class="record-detail">${r.mileage.toLocaleString()} mi</span>` : ''}
+        ${r.cost != null ? `<span class="record-cost">$${parseFloat(r.cost).toFixed(0)}</span>` : ''}
+        <button class="record-del" onclick="deleteVehicleRecord('${r.id}')" title="Delete">✕</button>
+      </div>`).join('')
+    : '<div class="no-records">No service records yet</div>';
+
+  const title = [v.year, v.make, v.model].filter(Boolean).join(' ');
+  const sub = v.nickname || v.color || '';
+
+  return `
+  <div class="maint-card" id="vcard-${v.id}">
+    <div class="maint-card-header">
+      <div>
+        <div class="vehicle-title">${esc(title)}</div>
+        ${sub ? `<div class="vehicle-sub">${esc(sub)}</div>` : ''}
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-secondary btn-xs" onclick="openAddVehicle('${v.id}')">Edit</button>
+        <button class="btn btn-primary btn-xs" onclick="openAddVehicleRecord('${v.id}')">+ Service</button>
+      </div>
+    </div>
+    ${badgesHtml ? `<div class="badges-row">${badgesHtml}</div>` : ''}
+    <div class="records-list">${recsHtml}</div>
+    <div class="card-footer-bar">
+      <span style="font-size:11px;color:var(--text-muted)">${recs.length} record${recs.length !== 1 ? 's' : ''}</span>
+      ${recs.length > 3 ? `<button class="view-all-link" onclick="openVehicleHistory('${v.id}')">View all ${recs.length} →</button>` : ''}
+    </div>
+  </div>`;
+}
+
+// ── RENDER HOME ───────────────────────────────────────────────────────────────
+function renderHome() {
+  const grid = document.getElementById('home-grid');
+  const filtered = activeCat ? homeItems.filter(i => i.category === activeCat) : homeItems;
+  document.getElementById('home-count-label').textContent = activeCat
+    ? `${activeCat} (${filtered.length})`
+    : `Home Items (${homeItems.length})`;
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty-state"><p>${activeCat ? 'No items in this category.' : 'No home items yet.'}</p><button class="btn btn-primary" onclick="openAddItem()">+ Add Item</button></div>`;
+    return;
+  }
+  grid.innerHTML = filtered.map(i => homeItemCardHtml(i)).join('');
+}
+
+function homeItemCardHtml(item) {
+  const recs = homeRecords.filter(r => r.item_id === item.id);
+  const latestRec = recs[0];
+  const alertBadge = latestRec && latestRec.next_due_date
+    ? alertBadgeHtml('Next Service', alertStatus(latestRec.next_due_date))
+    : '';
+  const wBadge = warrantyBadgeHtml(item.warranty_expiration);
+
+  const recent = recs.slice(0, 3);
+  const recsHtml = recent.length
+    ? recent.map(r => `
+      <div class="record-row">
+        <span class="record-date">${fmtDate(r.service_date)}</span>
+        <span class="record-type">${esc(r.description)}</span>
+        ${r.cost != null ? `<span class="record-cost">$${parseFloat(r.cost).toFixed(0)}</span>` : ''}
+        <button class="record-del" onclick="deleteItemRecord('${r.id}')" title="Delete">✕</button>
+      </div>`).join('')
+    : '<div class="no-records">No service records yet</div>';
+
+  const catColors = {
+    'HVAC / Filters': '#4f8ef7',
+    'Appliances': '#a78bfa',
+    'Roof / Exterior': '#34d399',
+    'Plumbing / Water': '#38bdf8',
+  };
+  const catColor = catColors[item.category] || 'var(--text-muted)';
+
+  return `
+  <div class="maint-card" id="icard-${item.id}">
+    <div class="maint-card-header">
+      <div>
+        <div class="vehicle-title">${esc(item.name)}</div>
+        <div class="vehicle-sub" style="color:${catColor}">${esc(item.category)}</div>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-secondary btn-xs" onclick="openAddItem('${item.id}')">Edit</button>
+        <button class="btn btn-primary btn-xs" onclick="openAddItemRecord('${item.id}')">+ Service</button>
+      </div>
+    </div>
+    ${(alertBadge || wBadge) ? `<div class="badges-row">${alertBadge}${wBadge}</div>` : ''}
+    ${item.purchase_date ? `<div class="warranty-row">Installed: ${fmtDate(item.purchase_date)}</div>` : ''}
+    <div class="records-list">${recsHtml}</div>
+    <div class="card-footer-bar">
+      <span style="font-size:11px;color:var(--text-muted)">${recs.length} record${recs.length !== 1 ? 's' : ''}</span>
+      ${recs.length > 3 ? `<button class="view-all-link" onclick="openItemHistory('${item.id}')">View all ${recs.length} →</button>` : ''}
+    </div>
+  </div>`;
+}
+
+// ── TABS / FILTERS ────────────────────────────────────────────────────────────
+function setTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-vehicles').style.display = tab === 'vehicles' ? '' : 'none';
+  document.getElementById('tab-home').style.display = tab === 'home' ? '' : 'none';
+  document.getElementById('tab-vehicles-btn').classList.toggle('active', tab === 'vehicles');
+  document.getElementById('tab-home-btn').classList.toggle('active', tab === 'home');
+}
+
+function setCat(el, cat) {
+  activeCat = cat;
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderHome();
+}
+
+// ── VEHICLE CRUD ──────────────────────────────────────────────────────────────
+function openAddVehicle(id) {
+  editVehicleId = id || null;
+  document.getElementById('modal-vehicle-title').textContent = id ? 'Edit Vehicle' : 'Add Vehicle';
+  document.getElementById('vehicle-error').textContent = '';
+  document.getElementById('v-delete-btn').style.display = id ? 'inline-flex' : 'none';
+  if (id) {
+    const v = vehicles.find(x => x.id === id);
+    document.getElementById('v-year').value = v.year || '';
+    document.getElementById('v-make').value = v.make || '';
+    document.getElementById('v-model').value = v.model || '';
+    document.getElementById('v-nickname').value = v.nickname || '';
+    document.getElementById('v-color').value = v.color || '';
+    document.getElementById('v-notes').value = v.notes || '';
+  } else {
+    ['v-year','v-make','v-model','v-nickname','v-color','v-notes'].forEach(id => document.getElementById(id).value = '');
+  }
+  openModal('modal-vehicle');
+}
+
+async function saveVehicle() {
+  const make = document.getElementById('v-make').value.trim();
+  const model = document.getElementById('v-model').value.trim();
+  if (!make || !model) { document.getElementById('vehicle-error').textContent = 'Make and model are required.'; return; }
+  const row = {
+    make, model,
+    year: parseInt(document.getElementById('v-year').value) || null,
+    nickname: document.getElementById('v-nickname').value.trim() || null,
+    color: document.getElementById('v-color').value.trim() || null,
+    notes: document.getElementById('v-notes').value.trim() || null,
+  };
+  let err;
+  if (editVehicleId) {
+    ({ error: err } = await sb.from('maint_vehicles').update(row).eq('id', editVehicleId));
+  } else {
+    ({ error: err } = await sb.from('maint_vehicles').insert(row));
+  }
+  if (err) { document.getElementById('vehicle-error').textContent = err.message; return; }
+  closeModal('modal-vehicle');
+  await loadData();
+}
+
+async function deleteVehicle() {
+  if (!confirm('Delete this vehicle and all its service records?')) return;
+  const { error } = await sb.from('maint_vehicles').delete().eq('id', editVehicleId);
+  if (error) { document.getElementById('vehicle-error').textContent = error.message; return; }
+  closeModal('modal-vehicle');
+  await loadData();
+}
+
+// ── VEHICLE RECORD CRUD ───────────────────────────────────────────────────────
+function openAddVehicleRecord(vehicleId) {
+  addRecordVehicleId = vehicleId;
+  const v = vehicles.find(x => x.id === vehicleId);
+  document.getElementById('modal-vrecord-title').textContent = `Add Service — ${v ? [v.year, v.make, v.model].filter(Boolean).join(' ') : ''}`;
+  document.getElementById('vrecord-error').textContent = '';
+  document.getElementById('vr-type').value = '';
+  document.getElementById('vr-other-desc').value = '';
+  document.getElementById('vr-other-group').style.display = 'none';
+  document.getElementById('vr-date').value = todayStr();
+  document.getElementById('vr-mileage').value = '';
+  document.getElementById('vr-cost').value = '';
+  document.getElementById('vr-next-due').value = '';
+  document.getElementById('vr-notes').value = '';
+  openModal('modal-vrecord');
+}
+
+function onServiceTypeChange() {
+  const type = document.getElementById('vr-type').value;
+  document.getElementById('vr-other-group').style.display = type === 'Other' ? '' : 'none';
+  autoNextDue();
+}
+
+function autoNextDue() {
+  const type = document.getElementById('vr-type').value;
+  const dateVal = document.getElementById('vr-date').value;
+  const months = SERVICE_INTERVALS[type];
+  if (months && dateVal) {
+    const d = new Date(dateVal + 'T00:00:00');
+    d.setMonth(d.getMonth() + months);
+    document.getElementById('vr-next-due').value = d.toISOString().slice(0, 10);
+  }
+}
+
+async function saveVehicleRecord() {
+  const type = document.getElementById('vr-type').value;
+  const date = document.getElementById('vr-date').value;
+  if (!type) { document.getElementById('vrecord-error').textContent = 'Service type is required.'; return; }
+  if (!date) { document.getElementById('vrecord-error').textContent = 'Date is required.'; return; }
+  const serviceType = type === 'Other'
+    ? (document.getElementById('vr-other-desc').value.trim() || 'Other')
+    : type;
+  const row = {
+    vehicle_id: addRecordVehicleId,
+    service_type: serviceType,
+    service_date: date,
+    mileage: parseInt(document.getElementById('vr-mileage').value) || null,
+    cost: parseFloat(document.getElementById('vr-cost').value) || null,
+    next_due_date: document.getElementById('vr-next-due').value || null,
+    notes: document.getElementById('vr-notes').value.trim() || null,
+  };
+  const { error } = await sb.from('maint_vehicle_records').insert(row);
+  if (error) { document.getElementById('vrecord-error').textContent = error.message; return; }
+  closeModal('modal-vrecord');
+  await loadData();
+}
+
+async function deleteVehicleRecord(id) {
+  if (!confirm('Delete this service record?')) return;
+  await sb.from('maint_vehicle_records').delete().eq('id', id);
+  await loadData();
+}
+
+function openVehicleHistory(vehicleId) {
+  const v = vehicles.find(x => x.id === vehicleId);
+  document.getElementById('modal-vhistory-title').textContent = `Service History — ${v ? [v.year, v.make, v.model].filter(Boolean).join(' ') : ''}`;
+  const recs = vehicleRecords.filter(r => r.vehicle_id === vehicleId);
+  document.getElementById('vhistory-body').innerHTML = recs.length ? `
+    <table class="hist-table">
+      <thead><tr><th>Date</th><th>Service</th><th>Mileage</th><th>Cost</th><th>Next Due</th><th>Notes</th><th></th></tr></thead>
+      <tbody>${recs.map(r => `
+        <tr>
+          <td>${fmtDate(r.service_date)}</td>
+          <td>${esc(r.service_type)}</td>
+          <td>${r.mileage ? r.mileage.toLocaleString() + ' mi' : '—'}</td>
+          <td>${r.cost != null ? '$' + parseFloat(r.cost).toFixed(2) : '—'}</td>
+          <td>${r.next_due_date ? `<span class="badge badge-${alertStatus(r.next_due_date) === 'overdue' ? 'overdue' : alertStatus(r.next_due_date) === 'soon' ? 'soon' : 'ok'}">${fmtDate(r.next_due_date)}</span>` : '—'}</td>
+          <td style="color:var(--text-muted)">${esc(r.notes || '')}</td>
+          <td><button class="record-del" onclick="deleteVehicleRecord('${r.id}');closeModal('modal-vhistory');" title="Delete">✕</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty-state"><p>No records.</p></div>';
+  openModal('modal-vhistory');
+}
+
+// ── HOME ITEM CRUD ────────────────────────────────────────────────────────────
+function openAddItem(id) {
+  editItemId = id || null;
+  document.getElementById('modal-item-title').textContent = id ? 'Edit Item' : 'Add Home Item';
+  document.getElementById('item-error').textContent = '';
+  document.getElementById('i-delete-btn').style.display = id ? 'inline-flex' : 'none';
+  if (id) {
+    const item = homeItems.find(x => x.id === id);
+    document.getElementById('i-name').value = item.name || '';
+    document.getElementById('i-category').value = item.category || '';
+    document.getElementById('i-purchase').value = item.purchase_date || '';
+    document.getElementById('i-warranty').value = item.warranty_expiration || '';
+    document.getElementById('i-notes').value = item.notes || '';
+  } else {
+    ['i-name','i-purchase','i-warranty','i-notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('i-category').value = activeCat || '';
+  }
+  openModal('modal-item');
+}
+
+async function saveItem() {
+  const name = document.getElementById('i-name').value.trim();
+  const category = document.getElementById('i-category').value;
+  if (!name) { document.getElementById('item-error').textContent = 'Item name is required.'; return; }
+  if (!category) { document.getElementById('item-error').textContent = 'Category is required.'; return; }
+  const row = {
+    name, category,
+    purchase_date: document.getElementById('i-purchase').value || null,
+    warranty_expiration: document.getElementById('i-warranty').value || null,
+    notes: document.getElementById('i-notes').value.trim() || null,
+  };
+  let err;
+  if (editItemId) {
+    ({ error: err } = await sb.from('maint_home_items').update(row).eq('id', editItemId));
+  } else {
+    ({ error: err } = await sb.from('maint_home_items').insert(row));
+  }
+  if (err) { document.getElementById('item-error').textContent = err.message; return; }
+  closeModal('modal-item');
+  await loadData();
+}
+
+async function deleteItem() {
+  if (!confirm('Delete this item and all its service records?')) return;
+  const { error } = await sb.from('maint_home_items').delete().eq('id', editItemId);
+  if (error) { document.getElementById('item-error').textContent = error.message; return; }
+  closeModal('modal-item');
+  await loadData();
+}
+
+// ── HOME RECORD CRUD ──────────────────────────────────────────────────────────
+function openAddItemRecord(itemId) {
+  addRecordItemId = itemId;
+  const item = homeItems.find(x => x.id === itemId);
+  document.getElementById('modal-irecord-title').textContent = `Add Service — ${item ? item.name : ''}`;
+  document.getElementById('irecord-error').textContent = '';
+  document.getElementById('ir-desc').value = '';
+  document.getElementById('ir-date').value = todayStr();
+  document.getElementById('ir-cost').value = '';
+  document.getElementById('ir-next-due').value = '';
+  document.getElementById('ir-notes').value = '';
+  openModal('modal-irecord');
+}
+
+async function saveItemRecord() {
+  const desc = document.getElementById('ir-desc').value.trim();
+  const date = document.getElementById('ir-date').value;
+  if (!desc) { document.getElementById('irecord-error').textContent = 'Description is required.'; return; }
+  if (!date) { document.getElementById('irecord-error').textContent = 'Date is required.'; return; }
+  const row = {
+    item_id: addRecordItemId,
+    description: desc,
+    service_date: date,
+    cost: parseFloat(document.getElementById('ir-cost').value) || null,
+    next_due_date: document.getElementById('ir-next-due').value || null,
+    notes: document.getElementById('ir-notes').value.trim() || null,
+  };
+  const { error } = await sb.from('maint_home_records').insert(row);
+  if (error) { document.getElementById('irecord-error').textContent = error.message; return; }
+  closeModal('modal-irecord');
+  await loadData();
+}
+
+async function deleteItemRecord(id) {
+  if (!confirm('Delete this service record?')) return;
+  await sb.from('maint_home_records').delete().eq('id', id);
+  await loadData();
+}
+
+function openItemHistory(itemId) {
+  const item = homeItems.find(x => x.id === itemId);
+  document.getElementById('modal-ihistory-title').textContent = `Service History — ${item ? item.name : ''}`;
+  const recs = homeRecords.filter(r => r.item_id === itemId);
+  document.getElementById('ihistory-body').innerHTML = recs.length ? `
+    <table class="hist-table">
+      <thead><tr><th>Date</th><th>Description</th><th>Cost</th><th>Next Due</th><th>Notes</th><th></th></tr></thead>
+      <tbody>${recs.map(r => `
+        <tr>
+          <td>${fmtDate(r.service_date)}</td>
+          <td>${esc(r.description)}</td>
+          <td>${r.cost != null ? '$' + parseFloat(r.cost).toFixed(2) : '—'}</td>
+          <td>${r.next_due_date ? `<span class="badge badge-${alertStatus(r.next_due_date) === 'overdue' ? 'overdue' : alertStatus(r.next_due_date) === 'soon' ? 'soon' : 'ok'}">${fmtDate(r.next_due_date)}</span>` : '—'}</td>
+          <td style="color:var(--text-muted)">${esc(r.notes || '')}</td>
+          <td><button class="record-del" onclick="deleteItemRecord('${r.id}');closeModal('modal-ihistory');" title="Delete">✕</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty-state"><p>No records.</p></div>';
+  openModal('modal-ihistory');
+}
+
+// ── MODAL HELPERS ─────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.add('hidden'); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => m.classList.add('hidden'));
+});
+
+// ── LOGIN ENTER KEY ───────────────────────────────────────────────────────────
+document.getElementById('login-password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ── THEME ─────────────────────────────────────────────────────────────────────
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : '');
+  document.getElementById('theme-toggle').textContent = t === 'light' ? '☀️' : '🌙';
+}
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const next = localStorage.getItem('theme') === 'light' ? 'dark' : 'light';
+  localStorage.setItem('theme', next);
+  applyTheme(next);
+});
+applyTheme(localStorage.getItem('theme') || 'dark');
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function fmtDate(s) {
+  if (!s) return '';
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function todayStr() { return TODAY.toISOString().slice(0, 10); }
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+init();
+</script>
+</body>
+</html>
