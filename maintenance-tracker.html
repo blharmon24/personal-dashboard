@@ -178,7 +178,7 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
   </a>
   <h1>🔧 Maintenance Tracker</h1>
-  <span class="version">v2026.05.28.1</span>
+  <span class="version">v2026.05.28.2</span>
   <span class="header-user" id="header-user"></span>
   <button class="btn btn-secondary btn-sm" onclick="doLogout()">Sign Out</button>
   <button class="theme-btn" id="theme-toggle">🌙</button>
@@ -301,6 +301,12 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
       <div class="form-group">
         <label>K&amp;N Air Filter #</label>
         <input type="text" id="v-air-filter" placeholder="e.g. 33-2304">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>K&amp;N Cabin Air Filter #</label>
+        <input type="text" id="v-cabin-filter" placeholder="e.g. VF2000">
       </div>
     </div>
     <div class="modal-error" id="vehicle-error"></div>
@@ -644,8 +650,9 @@ function vehicleCardHtml(v) {
   const specItems = [
     v.oil_type       ? { label: 'Oil',           val: v.oil_type }                   : null,
     v.drain_plug_size? { label: 'Drain Plug',     val: v.drain_plug_size }            : null,
-    v.oil_filter     ? { label: 'Oil Filter',     val: 'K&N ' + v.oil_filter }        : null,
-    v.air_filter     ? { label: 'Air Filter',     val: 'K&N ' + v.air_filter }        : null,
+    v.oil_filter      ? { label: 'Oil Filter',      val: 'K&N ' + v.oil_filter }       : null,
+    v.air_filter      ? { label: 'Air Filter',      val: 'K&N ' + v.air_filter }       : null,
+    v.cabin_air_filter? { label: 'Cabin Air Filter',val: 'K&N ' + v.cabin_air_filter } : null,
   ].filter(Boolean);
   const specsHtml = specItems.length ? `
     <div class="specs-grid">
@@ -788,8 +795,9 @@ function openAddVehicle(id) {
     document.getElementById('v-drain-plug').value = v.drain_plug_size || '';
     document.getElementById('v-oil-filter').value = v.oil_filter || '';
     document.getElementById('v-air-filter').value = v.air_filter || '';
+    document.getElementById('v-cabin-filter').value = v.cabin_air_filter || '';
   } else {
-    ['v-year','v-make','v-model','v-nickname','v-color','v-notes','v-oil-type','v-drain-plug','v-oil-filter','v-air-filter'].forEach(id => document.getElementById(id).value = '');
+    ['v-year','v-make','v-model','v-nickname','v-color','v-notes','v-oil-type','v-drain-plug','v-oil-filter','v-air-filter','v-cabin-filter'].forEach(id => document.getElementById(id).value = '');
   }
   openModal('modal-vehicle');
 }
@@ -808,6 +816,7 @@ async function saveVehicle() {
     drain_plug_size: document.getElementById('v-drain-plug').value.trim() || null,
     oil_filter: document.getElementById('v-oil-filter').value.trim() || null,
     air_filter: document.getElementById('v-air-filter').value.trim() || null,
+    cabin_air_filter: document.getElementById('v-cabin-filter').value.trim() || null,
   };
   let err;
   if (editVehicleId) {
