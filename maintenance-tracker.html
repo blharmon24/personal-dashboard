@@ -117,6 +117,12 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
 /* WARRANTY BADGE */
 .warranty-row{padding:6px 16px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);}
 
+/* VEHICLE SPECS */
+.specs-grid{padding:8px 16px;display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;border-bottom:1px solid var(--border);}
+.spec-item{display:flex;flex-direction:column;gap:1px;}
+.spec-label{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;}
+.spec-val{font-size:12px;font-weight:500;}
+
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;}
 .modal-overlay.hidden{display:none;}
@@ -172,7 +178,7 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
   </a>
   <h1>🔧 Maintenance Tracker</h1>
-  <span class="version">v2026.05.25.1</span>
+  <span class="version">v2026.05.28.1</span>
   <span class="header-user" id="header-user"></span>
   <button class="btn btn-secondary btn-sm" onclick="doLogout()">Sign Out</button>
   <button class="theme-btn" id="theme-toggle">🌙</button>
@@ -275,6 +281,27 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
     <div class="form-group">
       <label>Notes</label>
       <textarea id="v-notes" rows="2"></textarea>
+    </div>
+    <div style="margin:8px 0 4px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Filter &amp; Fluid Specs</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Oil Type</label>
+        <input type="text" id="v-oil-type" placeholder="e.g. 5W-30 Full Synthetic">
+      </div>
+      <div class="form-group">
+        <label>Drain Plug Size</label>
+        <input type="text" id="v-drain-plug" placeholder="e.g. 14mm x 1.5">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>K&amp;N Oil Filter #</label>
+        <input type="text" id="v-oil-filter" placeholder="e.g. HP-1017">
+      </div>
+      <div class="form-group">
+        <label>K&amp;N Air Filter #</label>
+        <input type="text" id="v-air-filter" placeholder="e.g. 33-2304">
+      </div>
     </div>
     <div class="modal-error" id="vehicle-error"></div>
     <div class="modal-footer-split">
@@ -614,6 +641,17 @@ function vehicleCardHtml(v) {
     .map(([type, r]) => alertBadgeHtml(type, alertStatus(r.next_due_date)))
     .filter(Boolean).join('');
 
+  const specItems = [
+    v.oil_type       ? { label: 'Oil',           val: v.oil_type }                   : null,
+    v.drain_plug_size? { label: 'Drain Plug',     val: v.drain_plug_size }            : null,
+    v.oil_filter     ? { label: 'Oil Filter',     val: 'K&N ' + v.oil_filter }        : null,
+    v.air_filter     ? { label: 'Air Filter',     val: 'K&N ' + v.air_filter }        : null,
+  ].filter(Boolean);
+  const specsHtml = specItems.length ? `
+    <div class="specs-grid">
+      ${specItems.map(s => `<div class="spec-item"><span class="spec-label">${s.label}</span><span class="spec-val">${esc(s.val)}</span></div>`).join('')}
+    </div>` : '';
+
   const recent = recs.slice(0, 3);
   const moreCount = recs.length - 3;
 
@@ -643,6 +681,7 @@ function vehicleCardHtml(v) {
         <button class="btn btn-primary btn-xs" onclick="openAddVehicleRecord('${v.id}')">+ Service</button>
       </div>
     </div>
+    ${specsHtml}
     ${badgesHtml ? `<div class="badges-row">${badgesHtml}</div>` : ''}
     <div class="records-list">${recsHtml}</div>
     <div class="card-footer-bar">
@@ -745,8 +784,12 @@ function openAddVehicle(id) {
     document.getElementById('v-nickname').value = v.nickname || '';
     document.getElementById('v-color').value = v.color || '';
     document.getElementById('v-notes').value = v.notes || '';
+    document.getElementById('v-oil-type').value = v.oil_type || '';
+    document.getElementById('v-drain-plug').value = v.drain_plug_size || '';
+    document.getElementById('v-oil-filter').value = v.oil_filter || '';
+    document.getElementById('v-air-filter').value = v.air_filter || '';
   } else {
-    ['v-year','v-make','v-model','v-nickname','v-color','v-notes'].forEach(id => document.getElementById(id).value = '');
+    ['v-year','v-make','v-model','v-nickname','v-color','v-notes','v-oil-type','v-drain-plug','v-oil-filter','v-air-filter'].forEach(id => document.getElementById(id).value = '');
   }
   openModal('modal-vehicle');
 }
@@ -761,6 +804,10 @@ async function saveVehicle() {
     nickname: document.getElementById('v-nickname').value.trim() || null,
     color: document.getElementById('v-color').value.trim() || null,
     notes: document.getElementById('v-notes').value.trim() || null,
+    oil_type: document.getElementById('v-oil-type').value.trim() || null,
+    drain_plug_size: document.getElementById('v-drain-plug').value.trim() || null,
+    oil_filter: document.getElementById('v-oil-filter').value.trim() || null,
+    air_filter: document.getElementById('v-air-filter').value.trim() || null,
   };
   let err;
   if (editVehicleId) {
