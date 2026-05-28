@@ -178,7 +178,7 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
   </a>
   <h1>🔧 Maintenance Tracker</h1>
-  <span class="version">v2026.05.28.2</span>
+  <span class="version">v2026.05.28.3</span>
   <span class="header-user" id="header-user"></span>
   <button class="btn btn-secondary btn-sm" onclick="doLogout()">Sign Out</button>
   <button class="theme-btn" id="theme-toggle">🌙</button>
@@ -283,10 +283,14 @@ header h1{font-size:1.05rem;font-weight:600;flex:1;}
       <textarea id="v-notes" rows="2"></textarea>
     </div>
     <div style="margin:8px 0 4px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">Filter &amp; Fluid Specs</div>
-    <div class="form-row">
+    <div class="form-row-3">
       <div class="form-group">
         <label>Oil Type</label>
         <input type="text" id="v-oil-type" placeholder="e.g. 5W-30 Full Synthetic">
+      </div>
+      <div class="form-group">
+        <label>Oil Capacity (qts)</label>
+        <input type="number" id="v-oil-capacity" placeholder="e.g. 5.5" step="0.5" min="0">
       </div>
       <div class="form-group">
         <label>Drain Plug Size</label>
@@ -648,8 +652,8 @@ function vehicleCardHtml(v) {
     .filter(Boolean).join('');
 
   const specItems = [
-    v.oil_type       ? { label: 'Oil',           val: v.oil_type }                   : null,
-    v.drain_plug_size? { label: 'Drain Plug',     val: v.drain_plug_size }            : null,
+    v.oil_type        ? { label: 'Oil',           val: v.oil_type + (v.oil_capacity_qts != null ? ' — ' + v.oil_capacity_qts + ' qts' : '') } : null,
+    v.drain_plug_size ? { label: 'Drain Plug',    val: v.drain_plug_size }            : null,
     v.oil_filter      ? { label: 'Oil Filter',      val: 'K&N ' + v.oil_filter }       : null,
     v.air_filter      ? { label: 'Air Filter',      val: 'K&N ' + v.air_filter }       : null,
     v.cabin_air_filter? { label: 'Cabin Air Filter',val: 'K&N ' + v.cabin_air_filter } : null,
@@ -792,12 +796,13 @@ function openAddVehicle(id) {
     document.getElementById('v-color').value = v.color || '';
     document.getElementById('v-notes').value = v.notes || '';
     document.getElementById('v-oil-type').value = v.oil_type || '';
+    document.getElementById('v-oil-capacity').value = v.oil_capacity_qts != null ? v.oil_capacity_qts : '';
     document.getElementById('v-drain-plug').value = v.drain_plug_size || '';
     document.getElementById('v-oil-filter').value = v.oil_filter || '';
     document.getElementById('v-air-filter').value = v.air_filter || '';
     document.getElementById('v-cabin-filter').value = v.cabin_air_filter || '';
   } else {
-    ['v-year','v-make','v-model','v-nickname','v-color','v-notes','v-oil-type','v-drain-plug','v-oil-filter','v-air-filter','v-cabin-filter'].forEach(id => document.getElementById(id).value = '');
+    ['v-year','v-make','v-model','v-nickname','v-color','v-notes','v-oil-type','v-oil-capacity','v-drain-plug','v-oil-filter','v-air-filter','v-cabin-filter'].forEach(id => document.getElementById(id).value = '');
   }
   openModal('modal-vehicle');
 }
@@ -813,6 +818,7 @@ async function saveVehicle() {
     color: document.getElementById('v-color').value.trim() || null,
     notes: document.getElementById('v-notes').value.trim() || null,
     oil_type: document.getElementById('v-oil-type').value.trim() || null,
+    oil_capacity_qts: parseFloat(document.getElementById('v-oil-capacity').value) || null,
     drain_plug_size: document.getElementById('v-drain-plug').value.trim() || null,
     oil_filter: document.getElementById('v-oil-filter').value.trim() || null,
     air_filter: document.getElementById('v-air-filter').value.trim() || null,
