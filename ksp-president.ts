@@ -13,7 +13,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 
-const MODEL = 'claude-opus-4-8'
+const MODEL = 'claude-sonnet-4-6'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
