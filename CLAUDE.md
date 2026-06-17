@@ -231,3 +231,40 @@ For Brian's parents who manage 12–15 rental properties. Files: `property-manag
 **Theme:** Shared `localStorage` key `'theme'`. Both pm pages have `#theme-toggle` in header.
 
 **⚠ PENDING — Before showing the app to Brian's parents:** Create Supabase Auth accounts. Go to Supabase dashboard → Authentication → Users → Add user → enter email + password. Need one account for parents (shared), one for Brian. Neither has been created yet.
+
+### Maintenance Tracker
+File: `maintenance-tracker.html`. Login-required (same Supabase project: `ebdsxcbpnhevzkbpdxry.supabase.co`, same anon key). Sidebar entry under My Projects (🔧 icon). Current version: **v2026.05.28.3**.
+
+**Two tabs:** Vehicles | Home
+
+**Supabase tables:** `maint_vehicles`, `maint_vehicle_records`, `maint_home_items`, `maint_home_records`. All restricted to `authenticated` role via RLS.
+
+**Vehicle spec columns on `maint_vehicles`:** `oil_type` (text), `oil_capacity_qts` (numeric), `drain_plug_size` (text), `oil_filter` (text — K&N part #), `air_filter` (text — K&N part #), `cabin_air_filter` (text — K&N part #). Displayed in a compact 2-column specs grid on the vehicle card. Oil type and capacity render together as e.g. `5W-30 Full Synthetic — 5.5 qts`. "K&N " prefix is added automatically in the card display — store only the part number (e.g. `HP-1017`).
+
+**Vehicle service types with auto next-due intervals:** Oil Change → 6 months, Tire Rotation → 6 months, Air Filter → 12 months, Registration → 12 months, Inspection/Emissions → 12 months. Other types require manual next_due_date.
+
+**Alert thresholds:** Overdue = next_due_date < today (red). Due Soon = within 30 days (yellow). Warranty warnings: 60 days (yellow), 30 days / expired (red).
+
+**Home categories:** HVAC / Filters, Appliances, Roof / Exterior, Plumbing / Water.
+
+**Stats bar:** Vehicles count, Overdue count (all tabs combined), Due Soon count, Home Items count, Warranties Expiring (within 60 days).
+
+### KSP Mission Control
+File: `ksp-mission-control.html`. Login-required (same Supabase project `ebdsxcbpnhevzkbpdxry.supabase.co`, same anon key, supabase-js v2). Sidebar entry under My Projects (🚀 icon). Current version: **v2026.06.17.2**. A play companion for Kerbal Space Program career mode: an AI "Agency President" assigns missions scaled to Brian's current capability, names vessels, sets real-world deadlines, assigns crew, and negotiates pay. Built per Brian's spec across this session.
+
+**Concept/design decisions (from Brian):** Capability is told to the President manually (not parsed from save files). Missions persist. Deadlines are real-world calendar dates. The President's personality is **randomly generated per career** (Brian discovers it through chat) and a president can **retire and be succeeded** by a new randomized persona while crew/missions/capability/earnings carry over. Money is **website-side play money only** (never in-game funds): a negotiated base salary ($/week) PLUS per-mission payout, with on-time/early **bonus** and late **penalty**.
+
+**Supabase tables (see `ksp-setup.sql` in repo — Brian must run it once):**
+- `ksp_program` (one row per career; "Start Over" deletes it and cascades): `program_name`, `president_name`, `president_title`, `president_persona`, capability cols `cap_tech`/`cap_science`/`cap_furthest`/`cap_craft`/`cap_notes`, `tech_tree` (text, default 'stock' — which tree dataset this career uses), `tech_done` (jsonb array of completed tech-node ids for the visual tree), `base_salary`, `salary_anchor_date`, `banked`, `chat` (jsonb conversation), `created_at`.
+- `ksp_crew`: `program_id` (FK cascade), `name`, `role` (Pilot/Engineer/Scientist/Tourist), `level` (0-5), `status` (available/assigned/lost), `notes`.
+- `ksp_missions`: `program_id` (FK cascade), `vessel_name`, `objective`, `deadline` (date), `assigned_crew` (text), `status` (proposed/active/complete/failed), `payout`, `bonus`, `penalty`, `briefing`, `completed_at`.
+- `ksp_tech`: `program_id` (FK cascade), `node` (tech node/area), `rationale`, `priority` (int — lower unlocks sooner), `status` (planned/unlocked). The President directs R&D — which tech-tree nodes to unlock with science, in what order — and may ask Brian's preference.
+- All four: RLS `for all to authenticated using(true)`. Edge Function uses service role (bypasses RLS).
+
+**Edge Function `ksp-president` (Deno; reference copy `ksp-president.ts` in repo, source of truth in Supabase dashboard):** Proxies Claude API (`claude-opus-4-8`, adaptive thinking) so the API key stays server-side. **Requires secret `ANTHROPIC_API_KEY`** (Brian must set it on the function). Two actions: `new_president` (generates a randomized persona via structured output — name/title/persona/opening_message — and writes it to the program; `succession:true` for retirement) and `chat` (runs an agentic tool loop with tools `propose_mission`, `update_mission`, `set_salary`, `recommend_tech`, `update_tech`, executing DB writes via service key, returns `{reply, changed}`). The function strips the leading assistant greeting so the Anthropic API's "first message must be user" rule holds.
+
+**Client architecture:** Setup screen (name program → create row → invoke `new_president`). Stats bar (Earnings, Salary/wk, Active, Overdue, Crew). Tabs: 💬 President (chat window — Enter sends, persists `chat` to program, reloads data when `changed`, sends `tech_context` so the President knows what's unlocked), 🎯 Missions (grouped proposed/active/complete/failed; Accept→active, Decline→delete, Mark Complete→sets completed_at + applies bonus/penalty to balance, Mark Failed→no pay; deadline countdown badges), 🌳 Tech Tree (visual — see below), 📋 R&D Plan (President's recommended unlock order from `ksp_tech` by `priority`, manual add/edit/delete), 👨‍🚀 Crew (roster CRUD), 🛰️ Capability (editable profile form).
+
+**🌳 Tech Tree tab (visual, added v2026.06.17.2):** Faithful left-to-right node map, per Brian's spec ("flows left to right with arrows pointing to the next level from the feeder level"). Node datasets live in the HTML as `TREES = { stock: { name, nodes } }`; `STOCK_TREE` is the authentic stock KSP tree (64 nodes, real costs incl. Basic Rocketry 5 / Stability 18 / General Rocketry 20, correct prerequisites — sourced from a stock `TechTree.cfg` mirror). Each career picks its tree at setup (`tech_tree`; only `stock` built so far, structure ready for Community Tech Tree etc.). Layout: columns = longest-path dependency depth from Start, rows minimized for crossings; SVG cubic-bezier arrows parent→child with a `context-stroke` arrowhead marker; absolutely-positioned node divs. Click a node to toggle completed → persists to `program.tech_done` and feeds the President via `techContextString()`. Completed nodes glow green; the President's recommended nodes (matched from `ksp_tech` by title/id) get a ★ ring. `getLayout()` caches by `tech_tree` key (layout is structural, independent of completion). Header buttons: "🔄 New President" (succession) and "🗑 Start Over" (delete + new game). Earnings = `banked` + live salary accrual (weeks since `salary_anchor_date` × base_salary) + sum of completed-mission net.
+
+**⚠ PENDING setup before this works:** (1) run `ksp-setup.sql` in Supabase SQL editor; (2) deploy the `ksp-president` Edge Function; (3) set the `ANTHROPIC_API_KEY` secret on that function; (4) needs a Supabase Auth account to log in (same as the other login-gated tools).
