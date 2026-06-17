@@ -79,6 +79,10 @@ header h1{font-size:1.05rem;font-weight:600;}
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
 
+/* FLEET */
+.fleet-missions{margin-top:10px;border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column;gap:4px;}
+.fleet-mission{font-size:11px;line-height:1.35;color:var(--text);}
+
 /* BADGES */
 .badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.04em;display:inline-flex;align-items:center;gap:3px;}
 .badge-proposed{background:rgba(79,142,247,.15);color:var(--accent);}
@@ -190,7 +194,7 @@ header h1{font-size:1.05rem;font-weight:600;}
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
   </a>
   <h1>🚀 KSP Mission Control</h1>
-  <span class="version">v2026.06.17.2</span>
+  <span class="version">v2026.06.17.4</span>
   <span class="header-spacer"></span>
   <button class="btn btn-secondary btn-sm" id="retire-btn" onclick="retirePresident()" style="display:none">🔄 New President</button>
   <button class="btn btn-secondary btn-sm" id="newgame-btn" onclick="startOver()" style="display:none">🗑 Start Over</button>
@@ -237,11 +241,14 @@ header h1{font-size:1.05rem;font-weight:600;}
     <div class="stat-item"><span class="stat-label">Overdue</span><span class="stat-val c-neg" id="s-overdue">—</span></div>
     <div class="stat-divider"></div>
     <div class="stat-item"><span class="stat-label">Crew</span><span class="stat-val" id="s-crew">—</span></div>
+    <div class="stat-divider"></div>
+    <div class="stat-item"><span class="stat-label">Fleet</span><span class="stat-val" id="s-fleet">—</span></div>
   </div>
 
   <div class="tabs">
     <button class="tab-btn active" id="tab-pres-btn" onclick="setTab('pres')">💬 President</button>
     <button class="tab-btn" id="tab-missions-btn" onclick="setTab('missions')">🎯 Missions</button>
+    <button class="tab-btn" id="tab-fleet-btn" onclick="setTab('fleet')">🚀 Fleet</button>
     <button class="tab-btn" id="tab-tree-btn" onclick="setTab('tree')">🌳 Tech Tree</button>
     <button class="tab-btn" id="tab-tech-btn" onclick="setTab('tech')">📋 R&amp;D Plan</button>
     <button class="tab-btn" id="tab-crew-btn" onclick="setTab('crew')">👨‍🚀 Crew</button>
@@ -256,6 +263,7 @@ header h1{font-size:1.05rem;font-weight:600;}
         <div class="pres-name" id="pres-name">—</div>
         <div class="pres-title" id="pres-title">—</div>
       </div>
+      <button class="btn btn-secondary btn-xs" onclick="renamePresident()" title="Rename the President" style="margin-left:auto">✏️ Rename</button>
     </div>
     <div class="chat-window">
       <div class="chat-log" id="chat-log"></div>
@@ -270,6 +278,16 @@ header h1{font-size:1.05rem;font-weight:600;}
   <div id="tab-missions" class="main" style="display:none">
     <div class="section-toolbar"><h2>Missions</h2></div>
     <div id="missions-body"></div>
+  </div>
+
+  <!-- FLEET TAB -->
+  <div id="tab-fleet" class="main" style="display:none">
+    <div class="section-toolbar">
+      <h2 id="fleet-count-label">Fleet</h2>
+      <button class="btn btn-primary" onclick="openVessel()">+ Add Vessel</button>
+    </div>
+    <p class="help-text" style="margin-bottom:16px">Every craft you've built and what it's flown. The President registers vessels when he assigns missions and updates their status as they fly — you can also add or edit ships here yourself.</p>
+    <div id="fleet-body"></div>
   </div>
 
   <!-- TECH TREE TAB (visual) -->
@@ -432,6 +450,55 @@ header h1{font-size:1.05rem;font-weight:600;}
   </div>
 </div>
 
+<!-- MODAL: Add/Edit Vessel -->
+<div class="modal-overlay hidden" id="modal-vessel">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-vessel-title">Add Vessel</h3>
+      <button class="modal-close" onclick="closeModal('modal-vessel')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Vessel Name *</label>
+      <input type="text" id="v-name" placeholder="e.g. Kerbal I">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Type</label>
+        <select id="v-type">
+          <option>Rocket</option><option>Lander</option><option>Spaceplane</option>
+          <option>Station</option><option>Rover</option><option>Probe</option>
+          <option>Satellite</option><option>Capsule</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="v-status">
+          <option value="planned">Planned</option>
+          <option value="active">In Flight / Operating</option>
+          <option value="recovered">Recovered</option>
+          <option value="destroyed">Destroyed / Lost</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Location</label>
+      <input type="text" id="v-location" placeholder="e.g. Mun low orbit, Kerbin surface, Duna transfer">
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="v-notes" rows="2" placeholder="e.g. 3-stage, ~4km/s dV; solar + battery; reusable booster"></textarea>
+    </div>
+    <div class="modal-error" id="vessel-error"></div>
+    <div class="modal-footer-split">
+      <button class="btn btn-danger btn-sm" id="v-delete-btn" onclick="deleteVessel()" style="display:none">Delete</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" onclick="closeModal('modal-vessel')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveVessel()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://ebdsxcbpnhevzkbpdxry.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_2chleZ28vhYAQqpW0RaNeg_0DYo_1v4';
@@ -440,8 +507,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 const DAY = 86400000;
 
-let program = null, crew = [], missions = [], tech = [], chat = [];
-let editCrewId = null, editTechId = null;
+let program = null, crew = [], missions = [], tech = [], vessels = [], chat = [];
+let editCrewId = null, editTechId = null, editVesselId = null;
 let currentTab = 'pres';
 let sending = false;
 
@@ -554,26 +621,28 @@ async function loadProgram() {
   if (!progs || !progs.length) { showScreen('setup'); return; }
   program = progs[0];
   chat = Array.isArray(program.chat) ? program.chat : [];
-  const [{ data: c }, { data: m }, { data: t }] = await Promise.all([
+  const [{ data: c }, { data: m }, { data: t }, { data: v }] = await Promise.all([
     sb.from('ksp_crew').select('*').eq('program_id', program.id).order('created_at'),
     sb.from('ksp_missions').select('*').eq('program_id', program.id).order('created_at'),
     sb.from('ksp_tech').select('*').eq('program_id', program.id).order('priority'),
+    sb.from('ksp_vessels').select('*').eq('program_id', program.id).order('created_at'),
   ]);
-  crew = c || []; missions = m || []; tech = t || [];
+  crew = c || []; missions = m || []; tech = t || []; vessels = v || [];
   showScreen('program');
   renderAll();
 }
 
 async function reloadData() {
-  const [{ data: p }, { data: c }, { data: m }, { data: t }] = await Promise.all([
+  const [{ data: p }, { data: c }, { data: m }, { data: t }, { data: v }] = await Promise.all([
     sb.from('ksp_program').select('*').eq('id', program.id).single(),
     sb.from('ksp_crew').select('*').eq('program_id', program.id).order('created_at'),
     sb.from('ksp_missions').select('*').eq('program_id', program.id).order('created_at'),
     sb.from('ksp_tech').select('*').eq('program_id', program.id).order('priority'),
+    sb.from('ksp_vessels').select('*').eq('program_id', program.id).order('created_at'),
   ]);
   if (p) program = p;
-  crew = c || []; missions = m || []; tech = t || [];
-  renderStats(); renderMissions(); renderTech(); renderCrew();
+  crew = c || []; missions = m || []; tech = t || []; vessels = v || [];
+  renderStats(); renderMissions(); renderTech(); renderCrew(); renderFleet();
 }
 
 // ── CAREER LIFECYCLE ──────────────────────────────────────────────────────────
@@ -603,7 +672,7 @@ async function createCareer() {
   program.president_persona = data.persona;
   chat = [{ role: 'assistant', content: data.opening_message }];
   await sb.from('ksp_program').update({ chat }).eq('id', program.id);
-  crew = []; missions = []; tech = [];
+  crew = []; missions = []; tech = []; vessels = [];
   btn.disabled = false; btn.textContent = 'Found the Program & Appoint a President';
   showScreen('program');
   renderAll();
@@ -630,14 +699,14 @@ async function retirePresident() {
 async function startOver() {
   if (!confirm('Start a brand-new game? This permanently deletes your current program, President, crew, missions, and earnings.')) return;
   if (!confirm('Are you absolutely sure? This cannot be undone.')) return;
-  await sb.from('ksp_program').delete().eq('id', program.id); // cascades crew + missions
-  program = null; crew = []; missions = []; tech = []; chat = [];
+  await sb.from('ksp_program').delete().eq('id', program.id); // cascades crew + missions + vessels
+  program = null; crew = []; missions = []; tech = []; vessels = []; chat = [];
   document.getElementById('setup-name').value = '';
   showScreen('setup');
 }
 
 // ── RENDER ──────────────────────────────────────────────────────────────────────
-function renderAll() { renderStats(); renderPresident(); renderMissions(); renderTree(); renderTech(); renderCrew(); renderCapability(); }
+function renderAll() { renderStats(); renderPresident(); renderMissions(); renderFleet(); renderTree(); renderTech(); renderCrew(); renderCapability(); }
 
 function salaryAccrued() {
   if (!program.base_salary || !program.salary_anchor_date) return 0;
@@ -669,12 +738,25 @@ function renderStats() {
   document.getElementById('s-active').textContent = activeM.length;
   document.getElementById('s-overdue').textContent = overdue;
   document.getElementById('s-crew').textContent = crew.filter(c => c.status !== 'lost').length;
+  document.getElementById('s-fleet').textContent = vessels.filter(v => v.status === 'active').length;
 }
 
 function renderPresident() {
   document.getElementById('pres-name').textContent = program.president_name || 'The President';
   document.getElementById('pres-title').textContent = program.president_title || '';
   renderChat();
+}
+
+async function renamePresident() {
+  const cur = program.president_name || '';
+  const name = prompt('Rename the President (this changes the display name only — personality stays the same):', cur);
+  if (name == null) return;                 // cancelled
+  const trimmed = name.trim();
+  if (!trimmed || trimmed === cur) return;
+  const { error } = await sb.from('ksp_program').update({ president_name: trimmed }).eq('id', program.id);
+  if (error) { alert('Rename failed: ' + error.message); return; }
+  program.president_name = trimmed;
+  renderPresident();                        // updates name + re-labels the chat log
 }
 
 function renderChat() {
@@ -699,7 +781,7 @@ async function sendChat() {
   document.getElementById('chat-send').disabled = true;
   renderChat();
   const { data, error } = await sb.functions.invoke('ksp-president', {
-    body: { action: 'chat', program_id: program.id, messages: chat, tech_context: techContextString() },
+    body: { action: 'chat', program_id: program.id, messages: chat, tech_context: techContextString(), fleet_context: fleetContextString() },
   });
   sending = false;
   document.getElementById('chat-send').disabled = false;
@@ -789,6 +871,119 @@ async function failMission(id) {
   if (!confirm('Mark this mission as failed? No pay will be awarded.')) return;
   await sb.from('ksp_missions').update({ status: 'failed', completed_at: TODAY.toISOString().slice(0,10) }).eq('id', id);
   await reloadData();
+}
+
+// ── FLEET ─────────────────────────────────────────────────────────────────────
+const VESSEL_TYPE_ICON = { Rocket:'🚀', Lander:'🛬', Spaceplane:'✈️', Station:'🛰️', Rover:'🚙', Probe:'📡', Satellite:'📶', Capsule:'🛸', Other:'🔩' };
+const VESSEL_STATUS = {
+  planned:   { label:'Planned',   cls:'badge-proposed' },
+  active:    { label:'In Flight',  cls:'badge-active' },
+  recovered: { label:'Recovered',  cls:'badge-complete' },
+  destroyed: { label:'Destroyed',  cls:'badge-failed' },
+};
+
+// Missions belonging to a vessel: linked by vessel_id, or (legacy) by matching name.
+function missionsForVessel(v) {
+  return missions.filter(m =>
+    m.vessel_id === v.id ||
+    (!m.vessel_id && (m.vessel_name || '').trim().toLowerCase() === (v.name || '').trim().toLowerCase())
+  );
+}
+
+function renderFleet() {
+  const body = document.getElementById('fleet-body');
+  document.getElementById('fleet-count-label').textContent = `Fleet (${vessels.length})`;
+  if (!vessels.length) {
+    body.innerHTML = `<div class="empty-state"><p>No vessels yet. The President registers ships when he assigns missions — or add one yourself with <b>+ Add Vessel</b>.</p></div>`;
+    return;
+  }
+  const order = { active:0, planned:1, recovered:2, destroyed:3 };
+  const sorted = [...vessels].sort((a,b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+  body.innerHTML = `<div class="cards-grid">` + sorted.map(v => {
+    const st = VESSEL_STATUS[v.status] || VESSEL_STATUS.planned;
+    const ms = missionsForVessel(v);
+    const active = ms.filter(m => m.status === 'active');
+    const done = ms.filter(m => m.status === 'complete');
+    const proposed = ms.filter(m => m.status === 'proposed');
+    const failed = ms.filter(m => m.status === 'failed');
+    const missionLine = (m) => {
+      const icon = m.status === 'complete' ? '✅' : m.status === 'active' ? '🟢' : m.status === 'failed' ? '❌' : '📋';
+      return `<div class="fleet-mission">${icon} ${esc(m.objective || 'Mission')}${m.status === 'complete' && m.completed_at ? ` <span class="muted">· ${fmtDate(m.completed_at)}</span>` : ''}</div>`;
+    };
+    const allMs = [...active, ...proposed, ...done, ...failed];
+    const missionsHtml = allMs.length
+      ? `<div class="fleet-missions">${allMs.map(missionLine).join('')}</div>`
+      : `<div class="fleet-missions muted" style="font-style:italic">No missions logged yet.</div>`;
+    return `<div class="card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div>
+          <div style="font-size:14px;font-weight:700">${VESSEL_TYPE_ICON[v.type] || '🔩'} ${esc(v.name)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${esc(v.type || 'Vessel')}${v.location ? ' · 📍 ' + esc(v.location) : ''}</div>
+        </div>
+        <button class="btn btn-secondary btn-xs" onclick="openVessel('${v.id}')">Edit</button>
+      </div>
+      <div style="margin-top:8px"><span class="badge ${st.cls}">${st.label}</span>
+        ${done.length ? `<span class="muted" style="font-size:11px;margin-left:6px">${done.length} flown</span>` : ''}</div>
+      ${v.notes ? `<div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.4">${esc(v.notes)}</div>` : ''}
+      ${missionsHtml}
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function openVessel(id) {
+  editVesselId = id || null;
+  document.getElementById('modal-vessel-title').textContent = id ? 'Edit Vessel' : 'Add Vessel';
+  document.getElementById('vessel-error').textContent = '';
+  document.getElementById('v-delete-btn').style.display = id ? 'inline-flex' : 'none';
+  if (id) {
+    const v = vessels.find(x => x.id === id);
+    document.getElementById('v-name').value = v.name || '';
+    document.getElementById('v-type').value = v.type || 'Rocket';
+    document.getElementById('v-status').value = v.status || 'planned';
+    document.getElementById('v-location').value = v.location || '';
+    document.getElementById('v-notes').value = v.notes || '';
+  } else {
+    document.getElementById('v-name').value = '';
+    document.getElementById('v-type').value = 'Rocket';
+    document.getElementById('v-status').value = 'active';
+    document.getElementById('v-location').value = '';
+    document.getElementById('v-notes').value = '';
+  }
+  openModal('modal-vessel');
+}
+async function saveVessel() {
+  const name = document.getElementById('v-name').value.trim();
+  if (!name) { document.getElementById('vessel-error').textContent = 'Vessel name is required.'; return; }
+  const row = {
+    program_id: program.id,
+    name,
+    type: document.getElementById('v-type').value,
+    status: document.getElementById('v-status').value,
+    location: document.getElementById('v-location').value.trim() || null,
+    notes: document.getElementById('v-notes').value.trim() || null,
+  };
+  let err;
+  if (editVesselId) ({ error: err } = await sb.from('ksp_vessels').update(row).eq('id', editVesselId));
+  else ({ error: err } = await sb.from('ksp_vessels').insert(row));
+  if (err) { document.getElementById('vessel-error').textContent = err.message; return; }
+  closeModal('modal-vessel');
+  await reloadData();
+}
+async function deleteVessel() {
+  if (!confirm('Remove this vessel from the fleet? Its missions are kept but unlinked.')) return;
+  await sb.from('ksp_vessels').delete().eq('id', editVesselId);
+  closeModal('modal-vessel');
+  await reloadData();
+}
+
+function fleetContextString() {
+  if (!vessels.length) return 'No vessels registered yet.';
+  return vessels.map(v => {
+    const ms = missionsForVessel(v);
+    const flown = ms.filter(m => m.status === 'complete').length;
+    const active = ms.filter(m => m.status === 'active').map(m => m.objective).join('; ');
+    return `- [id ${v.id}] "${v.name}" (${v.type || 'vessel'}) — status: ${VESSEL_STATUS[v.status]?.label || v.status}${v.location ? ', at ' + v.location : ''}; ${flown} mission(s) flown${active ? '; currently: ' + active : ''}`;
+  }).join('\n');
 }
 
 // ── TECH TREE (visual) ────────────────────────────────────────────────────────
@@ -1066,12 +1261,13 @@ async function deleteCrew() {
 // ── TABS ──────────────────────────────────────────────────────────────────────
 function setTab(tab) {
   currentTab = tab;
-  ['pres','missions','tree','tech','crew','cap'].forEach(t => {
+  ['pres','missions','fleet','tree','tech','crew','cap'].forEach(t => {
     document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
     document.getElementById('tab-' + t + '-btn').classList.toggle('active', t === tab);
   });
   if (tab === 'pres') document.getElementById('chat-log').scrollTop = document.getElementById('chat-log').scrollHeight;
   if (tab === 'tree') renderTree();
+  if (tab === 'fleet') renderFleet();
 }
 
 // ── MODAL HELPERS ─────────────────────────────────────────────────────────────

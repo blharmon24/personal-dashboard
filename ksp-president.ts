@@ -85,7 +85,9 @@ const PERSONA_SCHEMA = {
 async function generatePresident(programName: string, isSuccession: boolean): Promise<any> {
   const sys = `You are generating a brand-new, randomized character: the head of a Kerbal Space Program space agency in the game Kerbal Space Program. This character is the boss who hands the player (the Mission Director / lead engineer) their mission directives.
 
-Invent a DISTINCT personality each time — vary it widely across generations. They are a Kerbal (green, eager, a little reckless), so the name should usually end in "Kerman" (e.g. "Gusdun Kerman", "Bartrey Kerman"), though an occasional unusual name is fine. Give them a clear personality with quirks: they might be a penny-pinching bureaucrat, a glory-obsessed visionary, a nervous safety-first type, a gruff ex-pilot, a hype-driven showman, a deadpan paperwork zealot, etc. Pick ONE strong personality and commit to it.
+Invent a DISTINCT personality each time — vary it widely across generations. They are a Kerbal (green, eager, a little reckless). Give them a clear personality with quirks: they might be a penny-pinching bureaucrat, a glory-obsessed visionary, a nervous safety-first type, a gruff ex-pilot, a hype-driven showman, a deadpan paperwork zealot, etc. Pick ONE strong personality and commit to it.
+
+NAME — make it characterful and very Kerbal. It should almost always end in "Kerman", and the FIRST name should ideally telegraph their personality through a spaceflight pun, a riff on the game's own staff (Wernher von Kerman, Mortimer, Gus, Gene), or a fun mangled-syllable Kerbal name. Aim for this flavor (do NOT just copy these — invent a fresh one in the same spirit each time): "Thrustin Kerman" (cocky pilot), "Mortlock Kerman" (penny-pincher), "Wernsley Kerman" (mad-genius engineer), "Kessler Kerman" (reckless glory-hound), "Maxwell 'Max-Q' Kerman" (high-strung), "Periapsis 'Perry' Kerman" (orbital-mechanics pedant), "Gimbal Kerman" (twitchy micromanager), "Boomer Kerman" (hype showman). Match the name to the personality you pick. An occasional unusual non-"Kerman" name is fine.
 
 Fields:
 - name: the Kerbal's full name
@@ -121,6 +123,7 @@ function chatTools() {
           bonus: { type: 'number', description: 'Extra pay if completed on or before the deadline. Use 0 if none.' },
           penalty: { type: 'number', description: 'Pay docked if completed after the deadline. Use 0 if none.' },
           briefing: { type: 'string', description: 'A short in-character briefing paragraph for the mission.' },
+          vessel_id: { type: 'string', description: "Optional. The id of an EXISTING vessel from the fleet that will fly this mission (reuse a craft). For a brand-new craft, call register_vessel first and pass the new id here. If omitted, the mission is recorded with just the vessel_name." },
         },
         required: ['vessel_name', 'objective', 'deadline', 'assigned_crew', 'payout'],
       },
@@ -141,8 +144,40 @@ function chatTools() {
           bonus: { type: 'number' },
           penalty: { type: 'number' },
           briefing: { type: 'string' },
+          vessel_id: { type: 'string', description: 'Optional id of the fleet vessel flying this mission.' },
         },
         required: ['mission_id'],
+      },
+    },
+    {
+      name: 'register_vessel',
+      description: "Register a new craft in the agency fleet. Call this when a brand-new vessel is being built for a mission (then pass its returned id to propose_mission), or any time you and the Director name a new ship. Returns the new vessel's id.",
+      input_schema: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'The vessel name.' },
+          type: { type: 'string', enum: ['Rocket', 'Lander', 'Spaceplane', 'Station', 'Rover', 'Probe', 'Satellite', 'Capsule', 'Other'], description: 'Kind of craft.' },
+          status: { type: 'string', enum: ['planned', 'active', 'recovered', 'destroyed'], description: "Lifecycle state. Use 'planned' for a craft not yet launched, 'active' once it is flying/operating." },
+          location: { type: 'string', description: 'Where it is (e.g. "Kerbin launchpad", "Mun low orbit", "Duna transfer").' },
+          notes: { type: 'string', description: 'Brief design notes (stages, dV, role).' },
+        },
+        required: ['name'],
+      },
+    },
+    {
+      name: 'update_vessel',
+      description: 'Update an existing fleet vessel as it flies — change its status (e.g. mark recovered or destroyed), location, or notes. Reference it by its id from the current fleet list.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          vessel_id: { type: 'string' },
+          name: { type: 'string' },
+          type: { type: 'string', enum: ['Rocket', 'Lander', 'Spaceplane', 'Station', 'Rover', 'Probe', 'Satellite', 'Capsule', 'Other'] },
+          status: { type: 'string', enum: ['planned', 'active', 'recovered', 'destroyed'] },
+          location: { type: 'string' },
+          notes: { type: 'string' },
+        },
+        required: ['vessel_id'],
       },
     },
     {
@@ -190,6 +225,7 @@ async function runTool(programId: string, program: any, name: string, input: any
     const m = await dbInsert('ksp_missions', {
       program_id: programId,
       vessel_name: input.vessel_name,
+      vessel_id: input.vessel_id || null,
       objective: input.objective,
       deadline: input.deadline || null,
       assigned_crew: input.assigned_crew || null,
@@ -203,11 +239,30 @@ async function runTool(programId: string, program: any, name: string, input: any
   }
   if (name === 'update_mission') {
     const patch: any = {}
-    for (const k of ['vessel_name', 'objective', 'deadline', 'assigned_crew', 'status', 'payout', 'bonus', 'penalty', 'briefing']) {
+    for (const k of ['vessel_name', 'vessel_id', 'objective', 'deadline', 'assigned_crew', 'status', 'payout', 'bonus', 'penalty', 'briefing']) {
       if (input[k] !== undefined) patch[k] = input[k]
     }
     await dbUpdate('ksp_missions', input.mission_id, patch)
     return `Mission ${input.mission_id} updated.`
+  }
+  if (name === 'register_vessel') {
+    const v = await dbInsert('ksp_vessels', {
+      program_id: programId,
+      name: input.name,
+      type: input.type || 'Rocket',
+      status: input.status || 'active',
+      location: input.location || null,
+      notes: input.notes || null,
+    })
+    return `Vessel "${input.name}" registered in the fleet (id ${v.id}). Pass this id as vessel_id when proposing the mission it will fly.`
+  }
+  if (name === 'update_vessel') {
+    const patch: any = {}
+    for (const k of ['name', 'type', 'status', 'location', 'notes']) {
+      if (input[k] !== undefined) patch[k] = input[k]
+    }
+    await dbUpdate('ksp_vessels', input.vessel_id, patch)
+    return `Vessel ${input.vessel_id} updated.`
   }
   if (name === 'recommend_tech') {
     const t = await dbInsert('ksp_tech', {
@@ -251,7 +306,7 @@ async function runTool(programId: string, program: any, name: string, input: any
 }
 
 // ── System prompt for the chat ────────────────────────────────────────────────
-function buildSystemPrompt(program: any, crew: any[], missions: any[], tech: any[], techContext: string): string {
+function buildSystemPrompt(program: any, crew: any[], missions: any[], tech: any[], vessels: any[], techContext: string): string {
   const today = new Date().toISOString().slice(0, 10)
   const cap = [
     program.cap_tech && `Tech / R&D progress: ${program.cap_tech}`,
@@ -273,6 +328,10 @@ function buildSystemPrompt(program: any, crew: any[], missions: any[], tech: any
     ? tech.map((t) => `- [id ${t.id}] (priority ${t.priority}) "${t.node}" — ${t.status}${t.rationale ? ' | ' + t.rationale : ''}`).join('\n')
     : 'No tech-tree directives yet.'
 
+  const fleetList = vessels.length
+    ? vessels.map((v) => `- [id ${v.id}] "${v.name}" (${v.type || 'vessel'}) — status: ${v.status}${v.location ? ', at ' + v.location : ''}${v.notes ? ' | ' + v.notes : ''}`).join('\n')
+    : 'No vessels in the fleet yet.'
+
   return `${program.president_persona}
 
 You are ${program.president_name}, ${program.president_title} of the space program "${program.program_name || 'the agency'}". You are speaking with the Mission Director (the player), who actually designs, builds and flies the craft in Kerbal Space Program. Stay fully in character at all times.
@@ -291,9 +350,14 @@ You set the program's missions. You decide what the agency should attempt next, 
 - You MAY ask the Director for their preference on tech focus — sometimes defer to them, sometimes set the direction yourself, in keeping with your personality.
 - Use recommend_tech to add a node/area to the plan (with a priority for ordering), and update_tech to reprioritize, revise, or mark one unlocked. The Director can also mark nodes unlocked in the app.
 
+# Fleet / vessels
+- The agency keeps a registry of every craft built. When a mission calls for a BRAND-NEW craft, call register_vessel to add it to the fleet, then pass the returned id as vessel_id when you call propose_mission. When a mission reuses an EXISTING craft (a station, a reusable booster, a rover already out there), pass that vessel's existing id instead of registering a duplicate.
+- Use update_vessel to keep the fleet current as ships fly — set a craft's location as it travels, mark it 'recovered' when it returns safely, or 'destroyed' if it is lost. Reflect mission outcomes in the fleet.
+
 # Tools
 - When you and the Director settle on a mission (or you formally assign one), call propose_mission to record it. It saves as "proposed" for the Director to accept in the app. Describe the mission in your chat reply too.
 - Use update_mission to renegotiate or change an existing mission's terms or status.
+- Use register_vessel / update_vessel to maintain the fleet as described above.
 - When you agree on a salary, call set_salary.
 - Use recommend_tech / update_tech to manage the R&D plan as described above.
 - Don't call a tool until terms are actually agreed or you are deliberately issuing a directive — chatting, brainstorming, and negotiating do not require tools.
@@ -307,6 +371,9 @@ ${roster}
 
 # Current missions
 ${missionList}
+
+# Current fleet (vessels)
+${fleetList}
 
 # Current R&D plan (tech tree)
 ${techList}
@@ -324,8 +391,9 @@ async function handleChat(programId: string, messages: any[], techContext: strin
   const crew = await dbSelect('ksp_crew', `program_id=eq.${programId}&select=*&order=created_at`)
   const missions = await dbSelect('ksp_missions', `program_id=eq.${programId}&select=*&order=created_at`)
   const tech = await dbSelect('ksp_tech', `program_id=eq.${programId}&select=*&order=priority`)
+  const vessels = await dbSelect('ksp_vessels', `program_id=eq.${programId}&select=*&order=created_at`)
 
-  const system = buildSystemPrompt(program, crew, missions, tech, techContext)
+  const system = buildSystemPrompt(program, crew, missions, tech, vessels, techContext)
   const tools = chatTools()
   // Convert incoming text history into the API shape.
   const apiMessages: any[] = messages.map((m: any) => ({ role: m.role, content: m.content }))

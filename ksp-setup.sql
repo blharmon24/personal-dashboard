@@ -41,11 +41,26 @@ create table if not exists ksp_crew (
   created_at  timestamptz default now()
 );
 
+-- ── VESSELS (FLEET) ──────────────────────────────────────────────────────────
+-- Every craft built. One vessel can fly many missions (reusable boosters,
+-- stations, rovers). The President registers/updates these via Edge Function.
+create table if not exists ksp_vessels (
+  id          uuid primary key default gen_random_uuid(),
+  program_id  uuid references ksp_program(id) on delete cascade,
+  name        text not null,                     -- vessel name
+  type        text default 'Rocket',             -- Rocket | Lander | Spaceplane | Station | Rover | Probe | Satellite | Capsule | Other
+  status      text default 'active',             -- planned | active | recovered | destroyed
+  location    text,                              -- where it is now (e.g. "Mun low orbit")
+  notes       text,                              -- design notes (stages, dV, role)
+  created_at  timestamptz default now()
+);
+
 -- ── MISSIONS ───────────────────────────────────────────────────────────────
 create table if not exists ksp_missions (
   id             uuid primary key default gen_random_uuid(),
   program_id     uuid references ksp_program(id) on delete cascade,
   vessel_name    text,                           -- vessel name(s) assigned by the President
+  vessel_id      uuid references ksp_vessels(id) on delete set null,  -- linked fleet vessel
   objective      text,                           -- what to accomplish
   deadline       date,                           -- real-world deadline
   assigned_crew  text,                           -- crew names assigned by the President
@@ -57,6 +72,9 @@ create table if not exists ksp_missions (
   completed_at   date,                           -- date Brian marked it complete
   created_at     timestamptz default now()
 );
+
+-- If ksp_missions already existed, add the vessel link:
+alter table ksp_missions add column if not exists vessel_id uuid references ksp_vessels(id) on delete set null;
 
 -- ── TECH TREE DIRECTIVES ─────────────────────────────────────────────────────
 -- The President's recommended unlock order for the R&D tech tree.
@@ -77,13 +95,16 @@ alter table ksp_program  enable row level security;
 alter table ksp_crew     enable row level security;
 alter table ksp_missions enable row level security;
 alter table ksp_tech     enable row level security;
+alter table ksp_vessels  enable row level security;
 
 drop policy if exists "auth all" on ksp_program;
 drop policy if exists "auth all" on ksp_crew;
 drop policy if exists "auth all" on ksp_missions;
 drop policy if exists "auth all" on ksp_tech;
+drop policy if exists "auth all" on ksp_vessels;
 
 create policy "auth all" on ksp_program  for all to authenticated using (true) with check (true);
 create policy "auth all" on ksp_crew     for all to authenticated using (true) with check (true);
 create policy "auth all" on ksp_missions for all to authenticated using (true) with check (true);
 create policy "auth all" on ksp_tech     for all to authenticated using (true) with check (true);
+create policy "auth all" on ksp_vessels  for all to authenticated using (true) with check (true);
