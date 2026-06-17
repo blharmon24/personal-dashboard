@@ -194,7 +194,7 @@ header h1{font-size:1.05rem;font-weight:600;}
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
   </a>
   <h1>🚀 KSP Mission Control</h1>
-  <span class="version">v2026.06.17.4</span>
+  <span class="version">v2026.06.17.5</span>
   <span class="header-spacer"></span>
   <button class="btn btn-secondary btn-sm" id="retire-btn" onclick="retirePresident()" style="display:none">🔄 New President</button>
   <button class="btn btn-secondary btn-sm" id="newgame-btn" onclick="startOver()" style="display:none">🗑 Start Over</button>
@@ -217,7 +217,7 @@ header h1{font-size:1.05rem;font-weight:600;}
       <label>Tech Tree</label>
       <select id="setup-tree">
         <option value="stock">Stock KSP</option>
-        <option value="ctt" disabled>Community Tech Tree (coming soon)</option>
+        <option value="ctt">Community Tech Tree</option>
       </select>
       <div class="help-text">Determines the tech tree you'll mark progress on. More trees can be added later.</div>
     </div>
@@ -295,6 +295,10 @@ header h1{font-size:1.05rem;font-weight:600;}
     <div class="section-toolbar">
       <h2 id="tree-title">Tech Tree</h2>
       <span class="muted" id="tree-count"></span>
+      <select id="tree-switcher" onchange="switchTree(this.value)" title="Switch tech tree" style="margin-left:auto">
+        <option value="stock">Stock KSP</option>
+        <option value="ctt">Community Tech Tree</option>
+      </select>
     </div>
     <div class="tree-legend">
       <span><span class="swatch" style="background:var(--surface2);border:1px solid var(--border)"></span>Locked</span>
@@ -580,7 +584,176 @@ const STOCK_TREE = [
   ['experimentalElectrics','Experimental Electrics',1000,['specializedElectrics']],
 ].map(([id,title,cost,parents]) => ({ id, title, cost, parents }));
 
-const TREES = { stock: { name: 'Stock KSP', nodes: STOCK_TREE } };
+// Community Tech Tree — stock nodes (commandModules gains simpleCommandModules parent) + ~82 CTT-specific nodes
+const CTT_TREE = [
+  // ── Stock nodes (carried into CTT unchanged, except commandModules) ──
+  ['start','Start',0,[]],
+  ['basicRocketry','Basic Rocketry',5,['start']],
+  ['engineering101','Engineering 101',5,['start']],
+  ['survivability','Survivability',15,['engineering101']],
+  ['stability','Stability',18,['engineering101','basicRocketry']],
+  ['generalRocketry','General Rocketry',20,['basicRocketry']],
+  ['aviation','Aviation',45,['stability']],
+  ['basicScience','Basic Science',45,['survivability']],
+  ['flightControl','Flight Control',45,['survivability','stability']],
+  ['advRocketry','Advanced Rocketry',45,['generalRocketry']],
+  ['generalConstruction','General Construction',45,['stability','generalRocketry']],
+  ['propulsionSystems','Propulsion Systems',90,['advRocketry']],
+  ['spaceExploration','Space Exploration',90,['basicScience']],
+  ['advFlightControl','Advanced Flight Control',90,['flightControl']],
+  ['landing','Landing',90,['flightControl','aviation']],
+  ['aerodynamicSystems','Aerodynamics',90,['aviation','generalConstruction']],
+  ['electrics','Electrics',90,['basicScience']],
+  ['heavyRocketry','Heavy Rocketry',90,['advRocketry']],
+  ['fuelSystems','Fuel Systems',90,['advRocketry','generalConstruction']],
+  ['advConstruction','Advanced Construction',90,['generalConstruction']],
+  ['miniaturization','Miniaturization',90,['basicScience']],
+  ['actuators','Actuators',160,['advConstruction']],
+  // CTT adds simpleCommandModules as an additional parent to commandModules
+  ['commandModules','Command Modules',160,['spaceExploration','advFlightControl','simpleCommandModules']],
+  ['heavierRocketry','Heavier Rocketry',160,['heavyRocketry']],
+  ['precisionEngineering','Precision Engineering',160,['miniaturization','electrics']],
+  ['advExploration','Advanced Exploration',160,['spaceExploration']],
+  ['specializedControl','Specialized Control',160,['advFlightControl']],
+  ['advLanding','Advanced Landing',160,['landing']],
+  ['supersonicFlight','Supersonic Flight',160,['aerodynamicSystems']],
+  ['advFuelSystems','Adv. Fuel Systems',160,['propulsionSystems','fuelSystems']],
+  ['advElectrics','Advanced Electrics',160,['electrics']],
+  ['specializedConstruction','Specialized Construction',160,['advConstruction']],
+  ['precisionPropulsion','Precision Propulsion',160,['propulsionSystems']],
+  ['advAerodynamics','Advanced Aerodynamics',160,['aerodynamicSystems']],
+  ['heavyLanding','Heavy Landing',300,['advLanding']],
+  ['scienceTech','Science Tech',300,['advExploration','precisionEngineering']],
+  ['unmannedTech','Unmanned Tech',300,['precisionEngineering']],
+  ['nuclearPropulsion','Nuclear Propulsion',300,['advFuelSystems','heavierRocketry']],
+  ['advMetalworks','Advanced MetalWorks',300,['specializedConstruction']],
+  ['fieldScience','Field Science',300,['advLanding','advExploration']],
+  ['highAltitudeFlight','High Altitude Flight',300,['supersonicFlight']],
+  ['largeVolumeContainment','Large Volume Containment',300,['advFuelSystems','specializedConstruction']],
+  ['composites','Composites',300,['specializedConstruction']],
+  ['electronics','Electronics',300,['precisionEngineering','advElectrics']],
+  ['largeElectrics','High-Power Electrics',300,['advElectrics']],
+  ['heavyAerodynamics','Heavy Aerodynamics',300,['advAerodynamics']],
+  ['ionPropulsion','Ion Propulsion',550,['scienceTech','unmannedTech']],
+  ['hypersonicFlight','Hypersonic Flight',550,['highAltitudeFlight']],
+  ['nanolathing','Nanolathing',550,['advMetalworks']],
+  ['advUnmanned','Advanced Unmanned Tech',550,['unmannedTech']],
+  ['metaMaterials','Meta-Materials',550,['composites']],
+  ['veryHeavyRocketry','Very Heavy Rocketry',550,['largeVolumeContainment','heavierRocketry']],
+  ['advScienceTech','Advanced Science Tech',550,['scienceTech','fieldScience']],
+  ['advancedMotors','Advanced Motors',550,['fieldScience']],
+  ['specializedElectrics','Specialized Electrics',550,['largeElectrics']],
+  ['highPerformanceFuelSystems','High-Performance Fuel Systems',550,['largeVolumeContainment']],
+  ['experimentalAerodynamics','Experimental Aerodynamics',550,['heavyAerodynamics']],
+  ['automation','Automation',550,['unmannedTech','electronics']],
+  ['aerospaceTech','Aerospace Tech',1000,['hypersonicFlight']],
+  ['largeUnmanned','Large Probes',1000,['advUnmanned','automation']],
+  ['experimentalScience','Experimental Science',1000,['advScienceTech']],
+  ['experimentalMotors','Experimental Motors',1000,['advancedMotors']],
+  ['experimentalElectrics','Experimental Electrics',1000,['specializedElectrics']],
+  // ── CTT-specific nodes ──
+  // Command branch
+  ['enhancedSurvivability','Enhanced Survivability',45,['survivability']],
+  ['simpleCommandModules','Simple Command Modules',90,['enhancedSurvivability']],
+  ['heavyCommandModules','Heavy Command Modules',300,['commandModules']],
+  ['specializedCommandModules','Specialized Command Modules',550,['heavyCommandModules']],
+  ['specializedLanders','Specialized Landers',1000,['specializedCommandModules']],
+  ['specializedCommandCenters','Specialized Command Centers',1000,['specializedCommandModules']],
+  ['heavyLanders','Heavy Landers',1500,['specializedLanders']],
+  ['heavyCommandCenters','Heavy Command Centers',1500,['specializedCommandCenters']],
+  // Aero branch
+  ['subsonicFlight','Subsonic Flight',90,['aviation']],
+  ['efficientFlightSystems','Efficient Flight Systems',160,['subsonicFlight']],
+  ['specializedFlightSystems','Specialized Flight Systems',550,['efficientFlightSystems']],
+  ['aerospaceComposites','Aerospace Composites',1000,['experimentalAerodynamics']],
+  ['advAerospaceEngineering','Advanced Aerospace Engineering',1500,['aerospaceComposites']],
+  ['expAircraftEngines','Experimental Aircraft Engines',1500,['aerospaceTech']],
+  // Robotics/actuators branch
+  ['advActuators','Advanced Actuators',300,['actuators']],
+  ['experimentalActuators','Experimental Actuators',550,['composites','advActuators']],
+  ['offworldManufacturing','Off-World Robotics',1000,['metaMaterials','experimentalActuators']],
+  ['orbitalAssembly','Orbital Assembly',1000,['metaMaterials']],
+  ['orbitalMegastructures','Orbital Megastructures',1500,['orbitalAssembly']],
+  // Construction branch
+  ['exoticAlloys','Exotic Alloys',1000,['nanolathing']],
+  ['exoticFuelStorage','Exotic Fuel Storage',1500,['specializedFuelStorage','exoticAlloys']],
+  ['extremeFuelStorage','Extreme Fuel Storage',2250,['exoticFuelStorage']],
+  // Rocketry branch
+  ['experimentalRocketry','Experimental Rocketry',1000,['veryHeavyRocketry','highPerformanceFuelSystems']],
+  ['giganticRocketry','Gigantic Rocketry',1500,['experimentalRocketry']],
+  ['colossalRocketry','Colossal Rocketry',2250,['giganticRocketry']],
+  ['specializedFuelStorage','Specialized Fuel Storage',1000,['highPerformanceFuelSystems']],
+  // Nuclear power branch
+  ['nuclearPower','Nuclear Power',300,['nuclearPropulsion']],
+  ['largeNuclearPower','Improved Nuclear Power',550,['nuclearPower']],
+  ['nuclearFuelSystems','Nuclear Fuel Systems',550,['nuclearPower']],
+  ['advNuclearPower','High Energy Nuclear Power',1000,['largeNuclearPower']],
+  ['expNuclearPower','Experimental Nuclear Power',1500,['advNuclearPower']],
+  ['exoticNuclearPower','Exotic Nuclear Power',2250,['expNuclearPower']],
+  ['fusionPower','Fusion Power',1500,['advNuclearPower']],
+  ['fusionRockets','Fusion Rockets',1500,['advNuclearPropulsion']],
+  ['advFusionReactions','Advanced Fusion Reactions',2250,['fusionPower','fusionRockets']],
+  ['exoticReactions','Exotic Fusion Reactions',4000,['advFusionReactions']],
+  ['quantumReactions','High Density Fusion Reactions',10000,['exoticReactions']],
+  ['antimatterPower','Antimatter Power',4000,['advFusionReactions','exoticNuclearPower']],
+  ['unifiedFieldTheory','Unified Field Theory',10000,['exoticReactions','antimatterPower']],
+  // Nuclear propulsion branch
+  ['improvedNuclearPropulsion','Improved Nuclear Propulsion',550,['nuclearPropulsion']],
+  ['advNuclearPropulsion','High Efficiency Nuclear Propulsion',1000,['improvedNuclearPropulsion']],
+  ['expNuclearPropulsion','Experimental Nuclear Propulsion',1500,['advNuclearPropulsion','experimentalRocketry']],
+  ['exoticNuclearPropulsion','Exotic Nuclear Propulsion',2250,['expNuclearPropulsion','giganticRocketry']],
+  // Ion/plasma branch
+  ['advIonPropulsion','Advanced Ion Propulsion',1000,['ionPropulsion']],
+  ['advGriddedThrusters','Advanced Electrostatic Thrusters',1500,['advIonPropulsion']],
+  ['expGriddedThrusters','Experimental Electrostatic Thrusters',2250,['advGriddedThrusters']],
+  ['plasmaPropulsion','Plasma Propulsion',1500,['advIonPropulsion']],
+  ['advEMSystems','Advanced Plasma Propulsion',2250,['plasmaPropulsion']],
+  ['specializedPlasmaGeneration','Specialized Plasma Propulsion',4000,['advEMSystems']],
+  ['exoticPlasmaPropulsion','Exotic Plasma Propulsion',10000,['specializedPlasmaGeneration']],
+  // Solar branch
+  ['advSolarTech','Advanced Solar Technology',550,['largeElectrics']],
+  ['advPVMaterials','Advanced Photovoltaic Materials',1000,['advSolarTech']],
+  ['cuttingEdgeSolarTech','Cutting-Edge Solar Technology',1000,['advSolarTech']],
+  ['exoticSolarTech','Exotic Solar Technology',1500,['cuttingEdgeSolarTech']],
+  ['microwavePowerTransmission','Microwave Power Transmission',1500,['experimentalElectrics','advPVMaterials']],
+  // Electrics branch
+  ['highTechElectricalSystems','High Tech Electrical Systems',1500,['experimentalElectrics']],
+  ['highPowerElectricalSystems','High Power Electrical Systems',2250,['highTechElectricalSystems']],
+  ['experimentalElectricalSystems','Experimental Electrical Systems',4000,['highPowerElectricalSystems']],
+  ['exoticElectricalSystems','Exotic Electrical Systems',10000,['experimentalElectricalSystems']],
+  // Heat management branch
+  ['heatManagementSystems','Heat Management Systems',160,['electrics']],
+  ['advHeatManagement','Advanced Heat Management',550,['heatManagementSystems']],
+  ['specializedRadiators','Specialized Radiators',1500,['advHeatManagement']],
+  ['exoticRadiators','Exotic Radiators',4000,['specializedRadiators']],
+  // Robotics/AI branch
+  ['mechatronics','Mechatronics',1000,['automation']],
+  ['artificialIntelligence','Artificial Intelligence',1500,['largeUnmanned']],
+  // Science branch
+  ['specializedScienceTech','Specialized Science Tech',550,['scienceTech']],
+  ['longTermScienceTech','Long Term Science Tech',1000,['specializedScienceTech']],
+  ['scientificOutposts','Scientific Outposts',1500,['longTermScienceTech']],
+  ['highEnergyScience','High Energy Science',2250,['scientificOutposts']],
+  ['appliedHighEnergyPhysics','Applied High Energy Physics',4000,['highEnergyScience']],
+  ['ultraHighEnergyPhysics','Ultra High Energy Physics',10000,['appliedHighEnergyPhysics']],
+  ['advOffworldMining','Advanced Off-World Mining',1500,['experimentalScience']],
+  ['resourceExploitation','Resource Exploitation',2250,['advOffworldMining']],
+  // Life support branch
+  ['recycling','Recycling',90,['basicScience']],
+  ['storageTech','Storage Technology',90,['basicScience']],
+  ['hydroponics','Hydroponics',160,['recycling','storageTech']],
+  ['logistics','Logistics',300,['storageTech']],
+  ['shortTermHabitation','Short Term Habitation',550,['hydroponics','logistics']],
+  ['longTermHabitation','Long Term Habitation',1000,['shortTermHabitation']],
+  ['advLogistics','Advanced Logistics',1500,['logistics']],
+  ['colonization','Colonization',2250,['longTermHabitation','advLogistics']],
+  ['advColonization','Advanced Colonization',4000,['colonization']],
+].map(([id,title,cost,parents]) => ({ id, title, cost, parents }));
+
+const TREES = {
+  stock: { name: 'Stock KSP', nodes: STOCK_TREE },
+  ctt:   { name: 'Community Tech Tree', nodes: CTT_TREE },
+};
 let layoutCache = null, layoutTreeKey = null;
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -1025,6 +1198,8 @@ function renderTree() {
   const canvas = document.getElementById('tree-canvas');
   const treeDef = TREES[program.tech_tree];
   document.getElementById('tree-title').textContent = (treeDef ? treeDef.name : program.tech_tree) + ' Tech Tree';
+  const sw = document.getElementById('tree-switcher');
+  if (sw) sw.value = program.tech_tree || 'stock';
   if (!treeDef) {
     document.getElementById('tree-count').textContent = '';
     canvas.style.width = ''; canvas.style.height = '';
@@ -1070,6 +1245,14 @@ function renderTree() {
   canvas.style.width = lay.width + 'px';
   canvas.style.height = lay.height + 'px';
   canvas.innerHTML = svg + nodesHtml;
+}
+
+async function switchTree(key) {
+  if (!TREES[key]) return;
+  layoutCache = null; layoutTreeKey = null;
+  program.tech_tree = key;
+  await sb.from('ksp_program').update({ tech_tree: key }).eq('id', program.id);
+  renderTree();
 }
 
 async function toggleNode(id) {
