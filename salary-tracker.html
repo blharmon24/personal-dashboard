@@ -269,7 +269,7 @@
   <h1>Salary Tracker</h1>
   <span id="status"></span>
   <span class="header-user" id="header-user"></span>
-  <span class="version">v2026.04.28.1</span>
+  <span class="version">v2026.07.27.1</span>
   <button class="btn-signout" onclick="doLogout()">Sign Out</button>
   <button id="theme-toggle">🌙</button>
 </header>
@@ -355,7 +355,14 @@ const { createClient }  = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const START       = new Date(2002, 4, 28);
-const CUR_YR      = 2025;
+// Salary year runs July 1 – June 30. The "current" salary year is this
+// calendar year once we're past July 1, otherwise the previous calendar year.
+function curSalaryYear() {
+  const now = new Date();
+  return now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+}
+const CUR_YR      = curSalaryYear();   // dynamic — drives highlight, scroll, chart windows
+const BASE_YR     = 2025;              // last year with a known actual base salary; projection/seed boundary
 const FIRST       = 2002;
 const LAST        = 2040;
 const DEFAULT_COLA = 3.0;
@@ -381,7 +388,7 @@ function buildComputedBases() {
     const r = D[yr] || {};
     if (r.base != null) {
       out[yr] = parseFloat(r.base);
-    } else if (yr > CUR_YR) {
+    } else if (yr > BASE_YR) {
       const prev = out[yr - 1] || 0;
       if (prev > 0) {
         const cola = r.cola != null ? parseFloat(r.cola) : DEFAULT_COLA;
@@ -659,7 +666,7 @@ function render() {
 
   for (let yr = FIRST; yr <= LAST; yr++) {
     const r    = D[yr] || {};
-    const fut  = yr > CUR_YR;
+    const fut  = yr > BASE_YR;
     const cur  = yr === CUR_YR;
     const yrs  = yrsAt(yr);
     const base = bases[yr];
@@ -790,9 +797,9 @@ async function showApp() {
   const { data: { session } } = await db.auth.getSession();
   if (session) document.getElementById('header-user').textContent = session.user.email;
   await loadFromDB();
-  if (!D[CUR_YR] || !D[CUR_YR].base) {
-    D[CUR_YR] = { base: SEED_SALARY, cola: null, slh: null, plh: null };
-    await upsertRow(CUR_YR);
+  if (!D[BASE_YR] || !D[BASE_YR].base) {
+    D[BASE_YR] = { base: SEED_SALARY, cola: null, slh: null, plh: null };
+    await upsertRow(BASE_YR);
   }
   document.getElementById('loading').style.display        = 'none';
   document.getElementById('chart-section').style.display  = 'block';
