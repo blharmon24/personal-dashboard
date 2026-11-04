@@ -8,7 +8,7 @@ GitHub Pages site at https://blharmon24.github.io (repo: blharmon24/personal-das
 - `pdf-merger.html` — Merge multiple PDFs sorted by X-Y filename pattern, inserts session divider pages
 
 **External project links in sidebar (open in new tab):**
-- BNAP Ledger: https://blharmon24.github.io/bnab-ledger/
+- BNAP Ledger: https://bnab-ledger.blharmon.workers.dev/#dashboard
 - IT Dashboard: https://blharmon24.github.io/slcsd-it-dashboard/dashboard.html
 
 When adding new tools, follow the project card pattern in index.html and bump the version number on every push.
