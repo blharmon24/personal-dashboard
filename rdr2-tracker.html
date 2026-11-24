@@ -241,7 +241,7 @@ function renderPelts() {
     <div class="stat"><b>${hand}</b>Perfect pelts in hand</div>
     <div class="stat"><b>${totP}</b>Delivered to Pearson</div>
     <div class="stat"><b>${totT}</b>Delivered to Trapper</div></div>
-    <p class="note" style="margin:0 0 10px">“In hand” is what you're carrying. The Pearson / Trapper columns fill in automatically from the Satchels and Trapper tabs. “Still needed” counts uncrafted satchels only.</p>
+    <p class="note" style="margin:0 0 10px">“In hand” is what you're carrying. Marking a pelt delivered to Pearson, or a Trapper recipe done, automatically takes it out of “in hand” (unticking puts it back). The Pearson / Trapper columns are running totals of what you've handed over. “Still needed” counts uncrafted satchels only.</p>
     <table><thead><tr><th>Animal</th><th>In hand</th><th>→ Pearson</th><th>→ Trapper</th><th>Still needed (satchels)</th></tr></thead><tbody>`;
   ANIMALS.forEach(a => {
     const p = d.pearson[a] || 0, t = d.trapper[a] || 0, n = d.neededP[a] || 0;
@@ -343,8 +343,35 @@ document.addEventListener('change', e => {
   const k = t.dataset.k;
   if (a === 'satcraft') satState(k).crafted = t.checked;
   else if (a === 'satprereq') satState(k).prereq = t.checked;
-  else if (a === 'sating') { if (t.checked) satState(k).ing[t.dataset.i] = true; else delete satState(k).ing[t.dataset.i]; }
-  else if (a === 'trapcraft') { if (t.checked) S.trap[k] = true; else delete S.trap[k]; }
+  else if (a === 'sating') {
+    // Delivering takes the pelt out of "in hand" ('h' = it was deducted, so unchecking returns it)
+    const st = satState(k), idx = t.dataset.i, animal = SAT.find(s => s.name === k).ing[idx].animal;
+    if (t.checked) {
+      if ((S.hand[animal] || 0) >= 1) { S.hand[animal]--; st.ing[idx] = 'h'; } else st.ing[idx] = true;
+    } else {
+      if (st.ing[idx] === 'h') S.hand[animal] = (S.hand[animal] || 0) + 1;
+      delete st.ing[idx];
+    }
+  }
+  else if (a === 'trapcraft') {
+    if (t.checked) {
+      const ded = {}, r = RECIPES.find(x => x.id === k);
+      r.ing.forEach(i => {
+        if (i.kind === 'perfect') {
+          const take = Math.min(S.hand[i.animal] || 0, i.qty);
+          if (take) { S.hand[i.animal] -= take; ded[i.animal] = (ded[i.animal] || 0) + take; }
+        } else if (i.kind === 'legendary' && heldLegend(i.animal)) { S.leg[i.animal].hand = false; ded['L:' + i.animal] = 1; }
+      });
+      S.trap[k] = { ded };
+    } else {
+      const ded = (S.trap[k] && S.trap[k].ded) || {};
+      for (const key in ded) {
+        if (key.startsWith('L:')) { const a2 = key.slice(2); S.leg[a2] = S.leg[a2] || {}; S.leg[a2].hand = true; }
+        else S.hand[key] = (S.hand[key] || 0) + ded[key];
+      }
+      delete S.trap[k];
+    }
+  }
   else if (a === 'leghunt') { S.leg[k] = S.leg[k] || {}; S.leg[k].hunted = t.checked; }
   else if (a === 'leghand') { S.leg[k] = S.leg[k] || {}; S.leg[k].hand = t.checked; if (t.checked) S.leg[k].hunted = true; }
   else return;
