@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RDR2 Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0f1117; --surface:#1a1d27; --border:#2d3148; --accent:#4f8ef7; --text:#e2e8f0;
+    --muted:#64748b; --hover:#252840; --ok:#34d399; --warn:#fbbf24; --err:#f87171;
+  }
+  [data-theme="light"] {
+    --bg:#f0f2f5; --surface:#ffffff; --border:#d5dae3; --accent:#2563eb; --text:#1e293b;
+    --muted:#64748b; --hover:#e8ecf3; --ok:#059669; --warn:#b45309; --err:#dc2626;
+  }
+  body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; padding:28px 24px 60px; }
+  .container { max-width:1000px; margin:0 auto; }
+  header { display:flex; align-items:center; gap:12px; margin-bottom:6px; flex-wrap:wrap; }
+  h1 { font-size:1.5rem; font-weight:600; }
+  .spacer { flex:1; }
+  .subtitle { color:var(--muted); font-size:.88rem; margin-bottom:20px; }
+  button, .btn { background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font:inherit; font-size:.85rem; cursor:pointer; }
+  button:hover { background:var(--hover); }
+  .tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+  .tab { padding:8px 16px; border-radius:8px; border:1px solid var(--border); background:var(--surface); cursor:pointer; font-size:.92rem; }
+  .tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .panel { display:none; } .panel.active { display:block; }
+  .stats { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .stat { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 14px; font-size:.82rem; color:var(--muted); }
+  .stat b { display:block; font-size:1.2rem; color:var(--text); }
+  .toolbar { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center; }
+  input[type=search], select { background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:7px 10px; font:inherit; font-size:.88rem; }
+  input[type=search] { flex:1; min-width:180px; }
+  table { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; font-size:.9rem; }
+  th, td { padding:8px 12px; border-bottom:1px solid var(--border); text-align:right; }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--muted); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
+  tr:last-child td { border-bottom:none; }
+  .stepper { display:inline-flex; align-items:center; gap:6px; }
+  .stepper button { width:26px; height:26px; padding:0; line-height:1; }
+  .stepper span { min-width:22px; text-align:center; font-weight:600; }
+  .zero { color:var(--muted); }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+  .card.done { border-color:var(--ok); }
+  .card.ready { border-color:var(--warn); }
+  .card-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+  .card-head h3 { font-size:1rem; font-weight:600; }
+  .tag { font-size:.72rem; padding:2px 8px; border-radius:20px; background:var(--hover); color:var(--muted); }
+  .tag.ok { background:rgba(52,211,153,.15); color:var(--ok); }
+  .tag.warn { background:rgba(251,191,36,.15); color:var(--warn); }
+  label.chk { display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:.88rem; }
+  input[type=checkbox] { accent-color:var(--accent); width:16px; height:16px; }
+  .ing { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  .chip { border:1px solid var(--border); border-radius:8px; padding:4px 10px; font-size:.83rem; display:inline-flex; align-items:center; gap:6px; background:var(--bg); }
+  .chip.have { border-color:var(--ok); } .chip.leg { border-color:var(--warn); }
+  .chip.sent { border-color:var(--ok); background:rgba(52,211,153,.12); }
+  .chip.other { color:var(--muted); }
+  .note { color:var(--muted); font-size:.8rem; margin-top:8px; }
+  .grid2 { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:10px; }
+  .foot { margin-top:28px; color:var(--muted); font-size:.8rem; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  @media (max-width:600px) { body { padding:16px 12px 40px; } th, td { padding:6px 8px; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🤠 RDR2 Tracker</h1>
+    <span class="spacer"></span>
+    <button id="theme-toggle" title="Toggle light/dark mode">🌙</button>
+  </header>
+  <p class="subtitle">Perfect pelts, Pearson's satchels, Trapper crafting &amp; legendary animals. Saved in this browser.</p>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="pelts">🦌 Pelts</div>
+    <div class="tab" data-tab="satchels">🎒 Pearson Satchels</div>
+    <div class="tab" data-tab="trapper">🧥 Trapper</div>
+    <div class="tab" data-tab="legend">⭐ Legendary</div>
+  </div>
+
+  <div class="panel active" id="p-pelts"></div>
+  <div class="panel" id="p-satchels"></div>
+  <div class="panel" id="p-trapper"></div>
+  <div class="panel" id="p-legend"></div>
+
+  <div class="foot">
+    <button id="export">Export backup</button>
+    <button id="import">Import backup</button>
+    <button id="reset">Reset all</button>
+    <input type="file" id="file" accept="application/json" hidden>
+    <span>Recipe data comes from community guides (Shacknews, rdr2.org) and may differ slightly from the game — verify in-game.</span>
+  </div>
+</div>
+
+<script>
+/* ---------- DATA ---------- */
+// Pearson satchels: [name, prerequisite, ingredients]. Every satchel also needs 1 perfect deer pelt.
+const SATCHELS = [
+  ['Valuables Satchel','Donate $50','Beaver, Rabbit'],
+  ['Materials Satchel','Craft 3 recipes at the scout fire','Boar, Iguana'],
+  ['Provisions Satchel','Upgrade the Provisions Wagon 2 times','Bison, Raccoon'],
+  ['Kit Satchel','Donate 3 Valuables','Elk, Panther'],
+  ['Ingredients Satchel','Donate 5 carcasses','Badger, Squirrel (perfect carcass)'],
+  ['Tonics Satchel','Upgrade the Medicine Wagon 2 times','Buck, Elk'],
+  ['Legend of the East Satchel','Craft all six other satchels','Wolf, Cougar']
+];
+
+// Trapper recipes: category -> [name, price, ingredients]
+const TRAPPER = {
+ Hats:[
+  ['Glorious',10,'Oriole Feather, Woodpecker Feather x4'],['Homestead',10,'Chicken Feather, Goose Feather x2'],
+  ['Huntsman',10,'Perfect Boar Pelt, Hawk Feather, Quail Feather x2'],['Judicious',10,'Pheasant Feather, Owl Feather'],
+  ['Native',10,'Pheasant Feather, Robin Feather x3, Sparrow Feather x4'],['Ram Sombrero',10,'Perfect Ram Hide'],
+  ['Scavenger',11,'Seagull Feather, Vulture Feather'],['Pilgrim',11,'Turkey Feather, Cedar Waxwing Feather x2, Blue Jay Feather x3'],
+  ['Pioneer',11,'Chicken Feather x3, Duck Feather x3, Turkey Feather x3'],['Elk Flop',12,'Perfect Elk Pelt'],
+  ['Goat Flop',12,'Perfect Goat Hide, Perfect Pronghorn Hide'],['Pronghorn Flop',12,'Perfect Pronghorn Hide, Perfect Opossum Pelt x4'],
+  ['Rat Flat',12,'Perfect Rat Pelt x10'],['Pursuer',13,'Eagle Feather x2, Pigeon Feather x2'],
+  ['Stalker',13,'Condor Feather, Loon Feather x2, Raven Feather x3'],['Iguana Big Valley',14,'Perfect Cow Hide, Perfect Iguana Skin'],
+  ['Rococo',15,'Cardinal Feather x2, Crow Feather x2'],['Majestic',15,'Songbird Feather x2, Woodpecker Feather x2, Rooster Feather x4'],
+  ['Muskrat Cavalry',15,'Perfect Muskrat Pelt, Perfect Rabbit Pelt x4'],['Plantation Slouch',15,'Perfect Bison Pelt'],
+  ['Coyote Gambler',16,'Perfect Coyote Pelt x2'],['Gila Monster Gambler',16,'Perfect Elk Pelt, Perfect Gila Monster Skin'],
+  ['Squirrel Flat',16,'Perfect Squirrel Pelt x6'],['Legendary Ram',17,'Legendary Ram Hide'],
+  ['Rat Infantry Hardee',17,'Perfect Goat Hide, Perfect Rat Pelt x6'],['Bison Gambler',18,'Perfect Bison Pelt, Oriole Feather x4, Robin Feather x4'],
+  ['Legendary Cougar Flop Hat',19,'Legendary Cougar Pelt, Turkey Feather x2'],['Beaver Drifter',20,'Perfect Beaver Pelt x2'],
+  ['Deer Cavalry Hat',20,'Perfect Deer Pelt, Raven Feather x10'],['Raccoon Mountain',21,'Perfect Beaver Pelt, Perfect Raccoon Pelt, Hawk Feather x2'],
+  ['Legendary Alligator Gambler',22,'Legendary Alligator Skin, Perfect Snake Skin x2'],
+  ['Legendary Beaver Flop',22,'Legendary Beaver Pelt, Legendary Boar Pelt, Cardinal Feather'],
+  ['Legendary Coyote Mountain',23,'Legendary Coyote Pelt, Eagle Feather x2'],['Skunk Mountain',23,'Perfect Skunk Pelt'],
+  ['Snake Bulldogger',23,'Perfect Sheep Hide, Perfect Snake Skin'],['Bear Grenadier',24,'Perfect Black Bear Pelt'],
+  ['Grenadier',24,'Perfect Beaver Pelt, Perfect Muskrat Pelt'],['Badger Mountain',26,'Perfect Badger Pelt'],
+  ['Beaver Mountain',28,'Perfect Beaver Pelt'],['Fox Mountain',30,'Perfect Fox Pelt'],
+  ['Legendary Bear Head',40,'Legendary Bear Pelt'],['Legendary White Bison',45,'Legendary White Bison Pelt']],
+ Vests:[
+  ['Principal',18,'Perfect Cow Hide, Perfect Deer Pelt'],['Sheepskin',20,'Perfect Sheep Hide x2'],['Shopkeeper Vest',20,'Perfect Sheep Hide x2'],
+  ['Hinterland',21,'Perfect Ram Hide'],['Outdoorsman',22,'Perfect Pronghorn Hide'],['Rugged Rangler',23,'Perfect Pig Hide'],
+  ['Rustic',23,'Perfect Cougar Pelt'],['Country',25,'Perfect Beaver Pelt, Perfect Buck Pelt'],['Huntsman Vest',25,'Perfect Deer Pelt, Perfect Sheep Hide'],
+  ['Legendary Buck Vest',26,'Legendary Buck Pelt, Perfect Ram Hide'],["No-Man's",27,'Perfect Panther Pelt, Perfect Goat Hide'],
+  ['Wilderness',28,'Perfect Wolf Pelt, Perfect Panther Pelt'],['Legendary Bison Vest',30,'Legendary Tatanka Bison Pelt'],
+  ['Billy Vest',32,'Perfect Armadillo Skin x2, Perfect Goat Hide x2'],['Legendary Alligator Vest',35,'Legendary Alligator Skin'],
+  ['Legendary Cougar/Wolf Vest',42,'Legendary Cougar Pelt, Legendary Wolf Pelt']],
+ Coats:[
+  ['Beaver Hunting Jacket',21,'Perfect Ox Hide, Perfect Coyote Pelt'],['Coyote Scout Jacket',20,'Perfect Coyote Pelt, Perfect Ox Hide'],
+  ['Legendary Moose Hunting Jacket',24,'Legendary Moose Pelt, Perfect Wolf Pelt'],['Wolf Coat',25,'Perfect Ram Hide, Perfect Wolf Pelt'],
+  ['Legendary Bear Coat',28,'Legendary Bear Pelt, Perfect Bison Pelt'],['Legendary White Bison Coat',29,'Legendary White Bison Pelt'],
+  ["Trapper's Cloak",32,'Perfect Sheep Hide'],['Legendary Pronghorn Coat',35,'Legendary Pronghorn Hide, Perfect Moose Pelt'],
+  ['Cougar Cutaway Coat',39,'Perfect Black Bear Pelt, Perfect Cougar Pelt x2'],['Legendary Panther Cloak',45,'Legendary Panther Pelt'],
+  ['Ram Shotgun Coat',45,'Perfect Ram Hide x2']],
+ Gloves:[
+  ['Buck Riding',5,'Perfect Buck Pelt'],['Pigskin Rifleman',8,'Perfect Pig Hide'],['Badger Rifleman',10,'Perfect Badger Pelt'],
+  ['Elk Riding',12,'Perfect Elk Pelt'],['Legendary Ram Rifleman',12,'Legendary Ram Hide'],['Legendary Elk Range',13,'Legendary Elk Pelt'],
+  ['Boar Riding',15,'Perfect Boar Pelt, Perfect Rabbit Pelt x2'],['Legendary Pronghorn Range',17,'Legendary Pronghorn Hide, Perfect Muskrat Pelt'],
+  ['Legendary Beaver Cavalry',18,'Legendary Beaver Pelt'],['Legendary Cougar Riding',20,'Legendary Cougar Pelt, Perfect Boar Pelt'],
+  ['Moose Range Gloves',22,'Perfect Moose Pelt'],['Winter Cavalry',25,'Perfect Rabbit Pelt, Perfect Muskrat Pelt x2'],
+  ['Snake Skin Cavalry',26,'Perfect Boar Pelt, Perfect Snake Skin'],['Iguana Range',27,'Perfect Collared Peccary Pig Pelt, Perfect Iguana Skin x2'],
+  ['Legendary Buck and Fox Range',28,'Legendary Buck Pelt, Legendary Fox Pelt'],['Legendary Panther Range',30,'Legendary Panther Pelt, Perfect Gila Monster Skin']],
+ Chaps:[
+  ['Muskrat Half-Chaps',5,'Perfect Muskrat Pelt x2'],['Pronghorn Half Chaps',7,'Perfect Pronghorn Hide'],['Deer Pelt Half-Chaps',9,'Perfect Deer Pelt'],
+  ['Moose Batwing Chaps',10,'Perfect Moose Pelt'],['Moose Half-Chaps',10,'Perfect Moose Pelt'],['Batwing Chaps',12,'Perfect Deer Pelt'],
+  ['Ox-Fringed Shotgun Chaps',15,'Perfect Ox Hide'],['Legendary Elk Half Chaps',16,'Legendary Elk Pelt, Perfect Sheep Hide'],
+  ['Bull-Fringed Shotgun Chaps',18,'Perfect Bull Hide'],['Javelina Half Chaps',18,'Perfect Collared Peccary Pig Pelt, Perfect Snake Skin'],
+  ['Legendary Coyote Half Chaps',20,'Legendary Coyote Pelt, Perfect Fox Pelt x2'],['Elk-Fringed Shotgun Chaps',21,'Perfect Elk Pelt'],
+  ['Boar-Fringed Shotgun Chaps',25,'Perfect Boar Pelt x2'],['Bear Batwing Chaps',27,'Perfect Bear Pelt'],
+  ['Legendary Bison Batwing Chaps',32,'Legendary Tatanka Bison Pelt'],['Legendary Ram Batwing Chaps',33,'Legendary Ram Hide'],
+  ['Legendary Wolf Batwing Chaps',34,'Legendary Wolf Pelt, Perfect Goat Hide'],['Sheep Batwing Chaps',35,'Perfect Sheep Hide x2'],
+  ['Bear-Fringed Shotgun Chaps',38,'Perfect Black Bear Pelt']],
+ Boots:[
+  ['Two Toned Moccasins',15,'Perfect Buck Pelt'],['Moccasins',17,'Perfect Buck Pelt'],['Legendary Moose Moccasins',22,'Legendary Moose Pelt, Perfect Cow Hide'],
+  ["Workman's Pride Boots",28,'Perfect Cow Hide, Perfect Goat Hide'],['Bull Fowler Boots',29,'Perfect Boar Pelt, Perfect Bull Hide'],
+  ['Legendary Elk Moccasins',30,'Legendary Elk Pelt, Perfect Goat Hide'],['Boar and Fowler Boots',31,'Perfect Ox Hide, Perfect Boar Pelt'],
+  ['Javelina Moccasins',33,'Perfect Collared Peccary Pig Pelt x2'],['Legendary Bear Roper',34,'Legendary Bear Pelt, Perfect Bull Hide'],
+  ['Legendary Alligator Fowlers',35,'Legendary Alligator Skin'],['Legendary Boar and Bison Fowlers',37,'Legendary Boar Pelt, Legendary Tatanka Bison Pelt'],
+  ['Skunk Trapper Boots',39,'Perfect Skunk Pelt x2'],['Legendary Fox Moccasins',40,'Perfect Elk Pelt, Legendary Fox Pelt']],
+ Saddles:[
+  ['Alligator Ranch Cutter Saddle',0,'Perfect Alligator Skin'],['Bear Dakota Saddle',0,'Perfect Bear Pelt'],['Beaver Roping Saddle',0,'Perfect Beaver Pelt'],
+  ['Boar Mother Hubbard Saddle',0,'Perfect Boar Pelt'],['Cougar McClelland Saddle',0,'Perfect Cougar Pelt'],
+  ['Rattlesnake Vaquero Saddle',0,'Perfect Snake Skin x10'],['Panther Trail Saddle',0,'Perfect Panther Pelt']]
+};
+
+/* ---------- PARSING ---------- */
+const stripType = s => s.replace(/ (Pelt|Hide|Skin)$/, '');
+function parseIng(str) {
+  return str.split(', ').map(t => {
+    const m = t.match(/^(.*?)(?: x(\d+))?$/), name = m[1], qty = +m[2] || 1;
+    if (name.startsWith('Perfect ')) return { kind:'perfect', animal:stripType(name.slice(8)), qty, name };
+    if (name.startsWith('Legendary ')) return { kind:'legendary', animal:stripType(name.slice(10)), qty, name };
+    return { kind:'other', name, qty };
+  });
+}
+const RECIPES = [];
+for (const cat in TRAPPER) TRAPPER[cat].forEach(([name, price, ing]) =>
+  RECIPES.push({ id:cat + ':' + name, cat, name, price, ing:parseIng(ing) }));
+const SAT = SATCHELS.map(([name, prereq, ing]) => {
+  const list = parseIng(ing.replace(' (perfect carcass)', ''));
+  list.forEach(i => i.kind = 'perfect');
+  return { name, prereq, ing:[{ kind:'perfect', animal:'Deer', qty:1, name:'Perfect Deer Pelt' }, ...list] };
+});
+const ANIMALS = [...new Set([
+  ...SAT.flatMap(s => s.ing.map(i => i.animal)),
+  ...RECIPES.flatMap(r => r.ing.filter(i => i.kind === 'perfect').map(i => i.animal))
+])].sort();
+const LEGENDS = [...new Set(RECIPES.flatMap(r => r.ing.filter(i => i.kind === 'legendary').map(i => i.animal)))].sort();
+
+/* ---------- STATE ---------- */
+const KEY = 'rdr2-tracker';
+let S;
+function load() {
+  try { S = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { S = {}; }
+  S.hand = S.hand || {}; S.sat = S.sat || {}; S.trap = S.trap || {}; S.leg = S.leg || {};
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+const satState = n => (S.sat[n] = S.sat[n] || { crafted:false, prereq:false, ing:{} });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- DERIVED ---------- */
+function derived() {
+  const pearson = {}, trapper = {}, neededP = {}, neededT = {};
+  SAT.forEach(s => {
+    const st = satState(s.name);
+    s.ing.forEach((i, idx) => {
+      if (st.ing[idx]) pearson[i.animal] = (pearson[i.animal] || 0) + i.qty;
+      else neededP[i.animal] = (neededP[i.animal] || 0) + i.qty;
+    });
+  });
+  RECIPES.forEach(r => r.ing.forEach(i => {
+    if (i.kind !== 'perfect') return;
+    if (S.trap[r.id]) trapper[i.animal] = (trapper[i.animal] || 0) + i.qty;
+  }));
+  return { pearson, trapper, neededP };
+}
+
+/* ---------- RENDER ---------- */
+function stepper(key, val) {
+  return `<span class="stepper"><button data-act="dec" data-k="${esc(key)}">−</button><span class="${val ? '' : 'zero'}">${val}</span><button data-act="inc" data-k="${esc(key)}">+</button></span>`;
+}
+function renderPelts() {
+  const d = derived();
+  const totP = Object.values(d.pearson).reduce((a, b) => a + b, 0);
+  const totT = Object.values(d.trapper).reduce((a, b) => a + b, 0);
+  const hand = Object.values(S.hand).reduce((a, b) => a + b, 0);
+  let h = `<div class="stats">
+    <div class="stat"><b>${hand}</b>Perfect pelts in hand</div>
+    <div class="stat"><b>${totP}</b>Delivered to Pearson</div>
+    <div class="stat"><b>${totT}</b>Delivered to Trapper</div></div>
+    <p class="note" style="margin:0 0 10px">“In hand” is what you're carrying. The Pearson / Trapper columns fill in automatically from the Satchels and Trapper tabs. “Still needed” counts uncrafted satchels only.</p>
+    <table><thead><tr><th>Animal</th><th>In hand</th><th>→ Pearson</th><th>→ Trapper</th><th>Still needed (satchels)</th></tr></thead><tbody>`;
+  ANIMALS.forEach(a => {
+    const p = d.pearson[a] || 0, t = d.trapper[a] || 0, n = d.neededP[a] || 0;
+    h += `<tr><td>${esc(a)}</td><td>${stepper('hand:' + a, S.hand[a] || 0)}</td>
+      <td class="${p ? '' : 'zero'}">${p}</td><td class="${t ? '' : 'zero'}">${t}</td><td class="${n ? '' : 'zero'}">${n}</td></tr>`;
+  });
+  document.getElementById('p-pelts').innerHTML = h + '</tbody></table>';
+}
+
+function renderSatchels() {
+  const crafted = SAT.filter(s => satState(s.name).crafted).length;
+  let h = `<div class="stats"><div class="stat"><b>${crafted} / ${SAT.length}</b>Satchels crafted</div>
+    <div class="stat"><b>${derived().pearson['Deer'] || 0} / ${SAT.length}</b>Deer pelts delivered</div></div>
+    <p class="note" style="margin:0 0 12px">Tap an ingredient to mark that perfect pelt as delivered to Pearson.</p>`;
+  SAT.forEach(s => {
+    const st = satState(s.name);
+    h += `<div class="card ${st.crafted ? 'done' : ''}"><div class="card-head"><h3>${esc(s.name)}</h3>
+      ${st.crafted ? '<span class="tag ok">Crafted</span>' : ''}<span class="spacer" style="flex:1"></span>
+      <label class="chk"><input type="checkbox" data-act="satcraft" data-k="${esc(s.name)}" ${st.crafted ? 'checked' : ''}> Crafted</label></div>
+      <label class="chk"><input type="checkbox" data-act="satprereq" data-k="${esc(s.name)}" ${st.prereq ? 'checked' : ''}> Prerequisite: ${esc(s.prereq)}</label>
+      <div class="ing">`;
+    s.ing.forEach((i, idx) => {
+      const sent = st.ing[idx];
+      h += `<label class="chip ${sent ? 'sent' : ''}"><input type="checkbox" data-act="sating" data-k="${esc(s.name)}" data-i="${idx}" ${sent ? 'checked' : ''}> Perfect ${esc(i.animal)}${sent ? ' → Pearson ✓' : ''}</label>`;
+    });
+    h += '</div></div>';
+  });
+  document.getElementById('p-satchels').innerHTML = h;
+}
+
+function heldLegend(a) { return !!(S.leg[a] && S.leg[a].hand); }
+function recipeStatus(r) {
+  const perfectOk = r.ing.filter(i => i.kind === 'perfect').every(i => (S.hand[i.animal] || 0) >= i.qty);
+  const legOk = r.ing.filter(i => i.kind === 'legendary').every(i => heldLegend(i.animal));
+  return perfectOk && legOk;
+}
+let trapCat = 'All', trapFilter = '', trapShow = 'all';
+function renderTrapper() {
+  const done = RECIPES.filter(r => S.trap[r.id]).length;
+  const ready = RECIPES.filter(r => !S.trap[r.id] && recipeStatus(r)).length;
+  let h = `<div class="stats"><div class="stat"><b>${done} / ${RECIPES.length}</b>Recipes crafted</div>
+    <div class="stat"><b>${ready}</b>Craftable from your “in hand” pelts</div></div>
+    <div class="toolbar"><input type="search" id="trap-search" placeholder="Search recipe or animal…" value="${esc(trapFilter)}">
+    <select id="trap-cat"><option>All</option>${Object.keys(TRAPPER).map(c => `<option ${c === trapCat ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    <select id="trap-show">${[['all','All'],['todo','Not crafted'],['ready','Craftable now'],['done','Crafted']].map(([v, l]) => `<option value="${v}" ${v === trapShow ? 'selected' : ''}>${l}</option>`).join('')}</select></div><div class="grid2">`;
+  const q = trapFilter.toLowerCase();
+  RECIPES.forEach(r => {
+    if (trapCat !== 'All' && r.cat !== trapCat) return;
+    const crafted = !!S.trap[r.id], ok = recipeStatus(r);
+    if (trapShow === 'todo' && crafted) return;
+    if (trapShow === 'done' && !crafted) return;
+    if (trapShow === 'ready' && (crafted || !ok)) return;
+    if (q && !(r.name.toLowerCase().includes(q) || r.ing.some(i => i.name.toLowerCase().includes(q)))) return;
+    h += `<div class="card ${crafted ? 'done' : ok ? 'ready' : ''}" style="margin:0"><div class="card-head"><h3>${esc(r.name)}</h3><span class="tag">${r.cat.replace(/s$/, '')}</span>
+      ${ok && !crafted ? '<span class="tag warn">Craftable</span>' : ''}<span style="flex:1"></span>
+      <label class="chk"><input type="checkbox" data-act="trapcraft" data-k="${esc(r.id)}" ${crafted ? 'checked' : ''}> Done</label></div><div class="ing">`;
+    r.ing.forEach(i => {
+      const have = i.kind === 'perfect' ? (S.hand[i.animal] || 0) >= i.qty : i.kind === 'legendary' ? heldLegend(i.animal) : false;
+      h += `<span class="chip ${i.kind === 'legendary' ? 'leg' : ''} ${have ? 'have' : ''} ${i.kind === 'other' ? 'other' : ''}">${esc(i.name)}${i.qty > 1 ? ' ×' + i.qty : ''}${have ? ' ✓' : ''}</span>`;
+    });
+    h += `</div>${r.price ? `<div class="note">$${r.price}</div>` : ''}</div>`;
+  });
+  document.getElementById('p-trapper').innerHTML = h + '</div>';
+  const se = document.getElementById('trap-search');
+  se.addEventListener('input', e => { trapFilter = e.target.value; const pos = e.target.selectionStart; renderTrapper(); const n = document.getElementById('trap-search'); n.focus(); n.setSelectionRange(pos, pos); });
+  document.getElementById('trap-cat').addEventListener('change', e => { trapCat = e.target.value; renderTrapper(); });
+  document.getElementById('trap-show').addEventListener('change', e => { trapShow = e.target.value; renderTrapper(); });
+}
+
+function renderLegend() {
+  const hunted = LEGENDS.filter(a => S.leg[a] && S.leg[a].hunted).length;
+  let h = `<div class="stats"><div class="stat"><b>${hunted} / ${LEGENDS.length}</b>Legendary animals hunted</div></div>
+    <p class="note" style="margin:0 0 12px">Animals shown are those whose pelts appear in Trapper recipes. “Pelt in hand” feeds the Trapper tab's Craftable check.</p><div class="grid2">`;
+  LEGENDS.forEach(a => {
+    const l = S.leg[a] || {};
+    const uses = RECIPES.filter(r => r.ing.some(i => i.kind === 'legendary' && i.animal === a));
+    h += `<div class="card ${l.hunted ? 'done' : ''}" style="margin:0"><div class="card-head"><h3>Legendary ${esc(a)}</h3></div>
+      <label class="chk"><input type="checkbox" data-act="leghunt" data-k="${esc(a)}" ${l.hunted ? 'checked' : ''}> Hunted</label>
+      &nbsp; <label class="chk"><input type="checkbox" data-act="leghand" data-k="${esc(a)}" ${l.hand ? 'checked' : ''}> Pelt in hand</label>
+      <div class="note">Used in: ${uses.map(r => `${esc(r.name)}${S.trap[r.id] ? ' ✓' : ''}`).join(', ')}</div></div>`;
+  });
+  document.getElementById('p-legend').innerHTML = h + '</div>';
+}
+
+function renderAll() { renderPelts(); renderSatchels(); renderTrapper(); renderLegend(); }
+
+/* ---------- EVENTS ---------- */
+document.addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const k = b.dataset.k.replace(/^hand:/, '');
+  const v = S.hand[k] || 0;
+  S.hand[k] = Math.max(0, v + (b.dataset.act === 'inc' ? 1 : -1));
+  save(); renderAll();
+});
+document.addEventListener('change', e => {
+  const t = e.target, a = t.dataset.act;
+  if (!a) return;
+  const k = t.dataset.k;
+  if (a === 'satcraft') satState(k).crafted = t.checked;
+  else if (a === 'satprereq') satState(k).prereq = t.checked;
+  else if (a === 'sating') { if (t.checked) satState(k).ing[t.dataset.i] = true; else delete satState(k).ing[t.dataset.i]; }
+  else if (a === 'trapcraft') { if (t.checked) S.trap[k] = true; else delete S.trap[k]; }
+  else if (a === 'leghunt') { S.leg[k] = S.leg[k] || {}; S.leg[k].hunted = t.checked; }
+  else if (a === 'leghand') { S.leg[k] = S.leg[k] || {}; S.leg[k].hand = t.checked; if (t.checked) S.leg[k].hunted = true; }
+  else return;
+  save(); renderAll();
+});
+document.getElementById('tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab'); if (!t) return;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'p-' + t.dataset.tab));
+});
+document.getElementById('export').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], { type:'application/json' }));
+  a.download = 'rdr2-tracker-backup.json'; a.click(); URL.revokeObjectURL(a.href);
+};
+document.getElementById('import').onclick = () => document.getElementById('file').click();
+document.getElementById('file').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(t => { try { S = JSON.parse(t); save(); load(); renderAll(); } catch (err) { alert('Invalid backup file'); } });
+  e.target.value = '';
+};
+document.getElementById('reset').onclick = () => {
+  if (confirm('Erase all RDR2 tracker progress in this browser?')) { S = {}; save(); load(); renderAll(); }
+};
+
+/* ---------- THEME (shared with dashboard) ---------- */
+const tt = document.getElementById('theme-toggle');
+function applyTheme(t) { document.documentElement.dataset.theme = t === 'light' ? 'light' : ''; tt.textContent = t === 'light' ? '☀️' : '🌙'; }
+let theme = 'dark'; try { theme = localStorage.getItem('theme') || 'dark'; } catch (e) {}
+applyTheme(theme);
+tt.onclick = () => { theme = theme === 'light' ? 'dark' : 'light'; try { localStorage.setItem('theme', theme); } catch (e) {} applyTheme(theme); };
+
+load(); renderAll();
+</script>
+</body>
+</html>
