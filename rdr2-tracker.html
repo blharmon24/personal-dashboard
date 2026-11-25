@@ -67,10 +67,10 @@
   <header>
     <h1>🤠 RDR2 Tracker</h1>
     <span class="spacer"></span>
-    <span style="color:var(--muted);font-size:.75rem">v2026.11.25.1</span>
+    <span style="color:var(--muted);font-size:.75rem">v2026.11.25.2</span>
     <button id="theme-toggle" title="Toggle light/dark mode">🌙</button>
   </header>
-  <p class="subtitle">Perfect pelts, Pearson's satchels, Trapper crafting, legendary animals &amp; Fence trinkets. Saved in this browser.</p>
+  <p class="subtitle">Perfect pelts, Pearson's satchels, Trapper crafting, legendary animals, Fence trinkets &amp; camp crafting. Saved in this browser.</p>
 
   <div class="tabs" id="tabs">
     <div class="tab active" data-tab="pelts">🦌 Pelts</div>
@@ -78,6 +78,7 @@
     <div class="tab" data-tab="trapper">🧥 Trapper</div>
     <div class="tab" data-tab="legend">⭐ Legendary</div>
     <div class="tab" data-tab="fence">🪙 Fence</div>
+    <div class="tab" data-tab="camp">🔥 Camp</div>
   </div>
 
   <div class="panel active" id="p-pelts"></div>
@@ -85,6 +86,7 @@
   <div class="panel" id="p-trapper"></div>
   <div class="panel" id="p-legend"></div>
   <div class="panel" id="p-fence"></div>
+  <div class="panel" id="p-camp"></div>
 
   <div class="foot">
     <button id="export">Export backup</button>
@@ -202,6 +204,77 @@ const FENCE_ITEMS = [
  ['Eagle Talon Talisman','Talisman',0,'Special/Ultimate Edition item','Eagle Eye duration +5 sec','Requires Special or Ultimate Edition; no craft data']
 ];
 
+
+// Camp: campfire crafting [name, category, ingredients, effect, unlock] and Camp Ledger upgrades [name, group, cost, effect]
+const CRAFTS = [
+ ['Potent Bitters','Tonic','Sage, Burdock Root','Fully restores Stamina; fortifies moderately','Start'],
+ ['Potent Health Cure','Tonic','Ginseng, Yarrow','Fully restores Health; fortifies moderately','Start'],
+ ['Potent Miracle Tonic','Tonic','Indian Tobacco x4, Ginseng x4, Sage x4','Fully restores all cores; fortifies moderately','Start'],
+ ['Potent Snake Oil','Tonic','Indian Tobacco','Fully restores Dead Eye; fortifies moderately','Start'],
+ ['Special Bitters','Tonic','Sage x2, Burdock Root','Fully restores Stamina; fortifies greatly','Fence after Ch. 2'],
+ ['Special Health Cure','Tonic','Ginseng x2, Yarrow x2, English Mace x2 (or Milkweed x2)','Fully restores Health; fortifies greatly','Fence after American Distillation'],
+ ['Special Miracle Tonic','Tonic','Currant x6, Yarrow x6, Burdock Root x4','Fully restores all cores; fortifies greatly','Fence after A Short Walk in a Pretty Town'],
+ ['Special Snake Oil','Tonic','Indian Tobacco x2, Currant x2 (or Prairie Poppy; qty not listed)','Fully restores Dead Eye; fortifies greatly','Fence after American Distillation'],
+ ['Dynamite Arrow','Ammo','Arrow, Dynamite, Flight Feather','Explodes on impact; can ruin pelts','Fence after A Short Walk in a Pretty Town'],
+ ['Fire Arrow','Ammo','Arrow, Animal Fat, Flight Feather','Sets target and surroundings on fire','Start of Ch. 2'],
+ ['Improved Arrow','Ammo','Arrow, Flight Feather','More damage, speed, penetration','Start of Ch. 2'],
+ ['Poison Arrow','Ammo','Arrow, Oleander Sage, Flight Feather','Damage over time','Fence after Ch. 2'],
+ ['Small Game Arrow','Ammo','Arrow, Flight Feather, Shotgun Shell','Kills small animals without damaging pelt','Start of Ch. 2'],
+ ['Revolver Cartridge - Explosive','Ammo','Revolver Cartridge (Express), Animal Fat','Explodes on impact','Start of Ch. 2'],
+ ['Pistol Cartridges - Explosive','Ammo','Pistol Cartridge, Animal Fat','Explodes on impact','Start of Ch. 2'],
+ ['Rifle Cartridge - Explosive','Ammo','Rifle Cartridge, Animal Fat','Explodes on impact','Start of Ch. 2'],
+ ['Repeater Cartridges - Explosive','Ammo','Repeater Cartridge, Animal Fat','Explodes on impact','Start of Ch. 2'],
+ ['Shotgun Slugs - Explosive','Ammo','Shotgun Shell, Animal Fat','Effect not listed in source','Fence after A Short Walk in a Pretty Town (Epilogue)'],
+ ['Shotgun Shells - Incendiary Buckshot','Ammo','Shotgun Shell, Moonshine','Effect not listed in source','Fence after Pouring Forth Oil'],
+ ['Revolver Cartridges - Split Point','Ammo','Revolver Cartridges','Slightly more damage; slower Dead Eye drain','Start of Ch. 2'],
+ ['Pistol Cartridges - Split Point','Ammo','Pistol Cartridges','Slightly more damage; slower Dead Eye drain','Start of Ch. 2'],
+ ['Rifle Cartridges - Split Point','Ammo','Rifle Cartridges','Slightly more damage; slower Dead Eye drain','Start of Ch. 2'],
+ ['Repeater Cartridges - Split Point','Ammo','Repeater Cartridges','Slightly more damage; slower Dead Eye drain','Start of Ch. 2'],
+ ['Improved Throwing Knife','Throwable','Throwing Knife, Eagle Feather x2 (or Hawk Feather x2)','More damage and accuracy','Start of Ch. 2'],
+ ['Poison Throwing Knife','Throwable','Throwing Knife, Oleander Sage','Damage over time','Fence after Pouring Forth Oil'],
+ ['Improved Tomahawk','Throwable','Tomahawk, Eagle Feather (or Hawk Feather)','More damage and accuracy','Start of Ch. 2'],
+ ['Homing Tomahawk','Throwable','Tomahawk, Owl Feather','More damage; path correction','Fence after Ch. 2'],
+ ['Volatile Dynamite','Throwable','Dynamite, Animal Fat, High-Velocity Cartridge','Dynamite with larger radius','Fence after American Distillation'],
+ ['Fire Bottle','Throwable','Animal Fat, Gin (or Bourbon / Guarma Rum / Fine Brandy)','Spreads fire on breakage','Start of Ch. 2'],
+ ['Volatile Fire Bottle','Throwable','Moonshine, Animal Fat','Fire Bottle with larger radius','Fence after Pouring Forth Oil'],
+ ['Potent Predator Bait','Bait / Hunting','Gritty Fish Meat, Blackberry','Attracts pristine predators','Start of Ch. 2'],
+ ['Potent Herbivore Bait','Bait / Hunting','Vanilla Flower, Violet Snowdrop, Bay Bolete','Attracts pristine herbivores','Start of Ch. 2'],
+ ['Predator Bait','Bait / Hunting','Stringy Meat, Blackberry','Attracts average predators','Start of Ch. 2'],
+ ['Cover Scent Lotion','Bait / Hunting','Scent Glands','Blocks human scent','Start of Ch. 2'],
+ ['Horse Meal','Horse','Hay x3 (or Beets x3)','Restores horse stamina and health','Fence after Pouring Forth Oil'],
+ ['Special Horse Stimulant','Horse','Sage x2, Common Bulrush x2, Wild Carrot x2','Restores horse stamina and health','Fence after Pouring Forth Oil'],
+ ['Potent Horse Stimulant','Horse','Sage (source says "Safe"), Common Bulrush','Fully restores horse Stamina','Start of Ch. 2'],
+ ['Special Horse Medicine','Horse','Ginseng x2, Common Bulrush x2, Wild Carrot x2','Regenerates horse health','Fence after Pouring Forth Oil'],
+ ['Potent Horse Medicine','Horse','Ginseng, Common Bulrush','Fully restores horse health','Start of Ch. 2'],
+ ['Special Horse Reviver','Horse','Ginseng x2, Mushrooms x2, Wild Carrot x2','Regenerates and reinforces horse health','Fence after American Distillation'],
+ ['Horse Ointment','Horse','Sage, Common Bulrush, Yarrow','Greatly restores Health Core; fully Stamina Core','Start of Ch. 2']
+];
+// Cooking: meat -> [tier of plain meal, seasonable?]  (Mint = Health, Oregano = Stamina, Thyme = Dead Eye)
+const MEATS = [
+ ['Big Game Meat','Fully restores all cores','Seasoned: fully all cores + 1-day Gold core for the herb\'s stat'],
+ ['Game, Prime Beef Joint, Tender Pork Loin, Venison, Succulent Fish, Exotic Bird','Greatly restores all cores','Seasoned: fully restores the herb\'s stat, greatly the others'],
+ ['Crustacean, Flaky Fish, Gristly Mutton, Plump Bird','Moderately restores all cores','Seasoned: greatly restores the herb\'s stat, moderately the others'],
+ ['Gamey Bird, Herptile, Stringy Meat, Gritty Fish','Slightly restores all cores','No seasoned versions'],
+];
+const LEDGER = [
+ ['Lodging Tier 2','Lodging',220,'More gang donations'],
+ ['Lodging Tier 3','Lodging',325,'Fast travel to select locations'],
+ ['Lodging Tier 4','Lodging',300,'More donations; slower supply use'],
+ ['Improve Our Offense','Arthur\'s Wagon',60,'Repeater ammo and arrows in restocks'],
+ ['Some Real Firepower','Arthur\'s Wagon',90,'Throwing knives, shotgun and rifle ammo'],
+ ['Let\'s Have Some Fun','Arthur\'s Wagon',110,'Fire bottles, high-velocity repeater ammo'],
+ ['Less Bland','Pearson\'s Wagon',30,'Fresh fruit and basic canned goods'],
+ ['Some Real Variety','Pearson\'s Wagon',45,'Chewing tobacco, premium canned goods'],
+ ['Treat Ourselves','Pearson\'s Wagon',55,'Cocaine gum and sweets'],
+ ['Leather Working Tools','Pearson\'s Wagon',225,'Unlocks satchel upgrades and camp cosmetics (another guide lists $180)'],
+ ['Sharpen The Senses','Strauss\' Wagon',30,'Snake Oil and Potent Bitters'],
+ ['Something With Kick','Strauss\' Wagon',50,'Tonics and premium liquor'],
+ ['The Good Stuff','Strauss\' Wagon',75,'Potent Health Cures and more tonics'],
+ ['Chicken Coop','Other',175,'More chickens; better Pearson stew'],
+ ['Horse Station','Other',300,'Recall main horse to camp from anywhere'],
+ ['Camp Boat','Other',360,'Easier transport; fishing access (after Ch. 3)']
+];
+
 /* ---------- PARSING ---------- */
 const stripType = s => s.replace(/ (Pelt|Hide|Skin)$/, '');
 function parseIng(str) {
@@ -231,7 +304,7 @@ const KEY = 'rdr2-tracker';
 let S;
 function load() {
   try { S = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { S = {}; }
-  S.hand = S.hand || {}; S.sat = S.sat || {}; S.trap = S.trap || {}; S.leg = S.leg || {}; S.fence = S.fence || {}; S.loot = S.loot || [];
+  S.hand = S.hand || {}; S.sat = S.sat || {}; S.trap = S.trap || {}; S.leg = S.leg || {}; S.fence = S.fence || {}; S.camp = S.camp || { unlocked:{}, ledger:{} }; S.loot = S.loot || [];
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 const satState = n => (S.sat[n] = S.sat[n] || { crafted:false, prereq:false, ing:{} });
@@ -394,7 +467,48 @@ function renderFence() {
   if (sold) sold.onclick = () => { S.loot = []; save(); renderFence(); };
 }
 
-function renderAll() { renderPelts(); renderSatchels(); renderTrapper(); renderLegend(); renderFence(); }
+let campCat = 'All', campShow = 'all', campFilter = '';
+function renderCamp() {
+  const unl = S.camp.unlocked, led = S.camp.ledger;
+  const cats = [...new Set(CRAFTS.map(c => c[1]))];
+  const owned = LEDGER.filter(l => led[l[0]]).length;
+  const spent = LEDGER.filter(l => led[l[0]]).reduce((a, l) => a + l[2], 0);
+  const remain = LEDGER.reduce((a, l) => a + l[2], 0) - spent;
+  const q = campFilter.toLowerCase();
+  let h = '<div class="stats"><div class="stat"><b>' + CRAFTS.filter(c => unl[c[0]]).length + ' / ' + CRAFTS.length + '</b>Recipes unlocked</div>' +
+    '<div class="stat"><b>' + owned + ' / ' + LEDGER.length + '</b>Camp upgrades bought</div>' +
+    '<div class="stat"><b>$' + remain + '</b>Upgrades still to buy</div></div>';
+  h += '<h3 style="margin:6px 0 8px;font-size:1rem">Cooking (any campfire)</h3><p class="note" style="margin:0 0 8px">Cooking is meat plus an optional herb: Wild Mint restores Health, Oregano Stamina, Creeping Thyme Dead Eye. Herb recipes need the grill (after the Chapter 2 mission Exit Pursued by a Bruised Ego).</p>' +
+    '<table><thead><tr><th>Meat</th><th>Plain</th><th>With Mint / Oregano / Thyme</th></tr></thead><tbody>' +
+    MEATS.map(m => '<tr><td>' + esc(m[0]) + '</td><td>' + esc(m[1]) + '</td><td>' + esc(m[2]) + '</td></tr>').join('') + '</tbody></table>';
+  h += '<h3 style="margin:22px 0 8px;font-size:1rem">Campfire crafting</h3><p class="note" style="margin:0 0 8px">Tick a recipe once you have its pamphlet / unlock.</p>' +
+    '<div class="toolbar"><input type="search" id="camp-search" placeholder="Search recipe or ingredient…" value="' + esc(campFilter) + '">' +
+    '<select id="camp-cat"><option>All</option>' + cats.map(c => '<option ' + (c === campCat ? 'selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>' +
+    '<select id="camp-show">' + [['all','All'],['todo','Not unlocked'],['done','Unlocked']].map(([v, l]) => '<option value="' + v + '" ' + (v === campShow ? 'selected' : '') + '>' + l + '</option>').join('') + '</select></div><div class="grid2">';
+  CRAFTS.forEach(([name, cat, ing, eff, unlock]) => {
+    const u = !!unl[name];
+    if (campCat !== 'All' && cat !== campCat) return;
+    if (campShow === 'todo' && u) return;
+    if (campShow === 'done' && !u) return;
+    if (q && !(name.toLowerCase().includes(q) || ing.toLowerCase().includes(q))) return;
+    h += '<div class="card ' + (u ? 'done' : '') + '" style="margin:0"><div class="card-head"><h3>' + esc(name) + '</h3><span class="tag">' + esc(cat) + '</span><span style="flex:1"></span>' +
+      '<label class="chk"><input type="checkbox" data-act="campunlock" data-k="' + esc(name) + '" ' + (u ? 'checked' : '') + '> Unlocked</label></div>' +
+      '<div class="note" style="margin:0 0 4px">' + esc(eff) + '</div><div class="ing"><span class="chip">' + esc(ing) + '</span></div><div class="note">Unlock: ' + esc(unlock) + '</div></div>';
+  });
+  h += '</div><h3 style="margin:22px 0 8px;font-size:1rem">Camp Ledger upgrades</h3><p class="note" style="margin:0 0 8px">Bought with gang money at the ledger. Upgrades can\'t be bought after Epilogue 2.</p><div class="grid2">';
+  LEDGER.forEach(([name, grp, cost, eff]) => {
+    const b = !!led[name];
+    h += '<div class="card ' + (b ? 'done' : '') + '" style="margin:0"><div class="card-head"><h3>' + esc(name) + '</h3><span class="tag">' + esc(grp) + '</span><span style="flex:1"></span>' +
+      '<label class="chk"><input type="checkbox" data-act="ledgerbuy" data-k="' + esc(name) + '" ' + (b ? 'checked' : '') + '> Bought</label></div>' +
+      '<div class="note" style="margin:0">$' + cost + ' · ' + esc(eff) + '</div></div>';
+  });
+  document.getElementById('p-camp').innerHTML = h + '</div>';
+  document.getElementById('camp-search').addEventListener('input', e => { campFilter = e.target.value; const pos = e.target.selectionStart; renderCamp(); const n = document.getElementById('camp-search'); n.focus(); n.setSelectionRange(pos, pos); });
+  document.getElementById('camp-cat').addEventListener('change', e => { campCat = e.target.value; renderCamp(); });
+  document.getElementById('camp-show').addEventListener('change', e => { campShow = e.target.value; renderCamp(); });
+}
+
+function renderAll() { renderPelts(); renderSatchels(); renderTrapper(); renderLegend(); renderFence(); renderCamp(); }
 
 /* ---------- EVENTS ---------- */
 document.addEventListener('click', e => {
@@ -441,6 +555,8 @@ document.addEventListener('change', e => {
       delete S.trap[k];
     }
   }
+  else if (a === 'campunlock') { if (t.checked) S.camp.unlocked[k] = true; else delete S.camp.unlocked[k]; }
+  else if (a === 'ledgerbuy') { if (t.checked) S.camp.ledger[k] = true; else delete S.camp.ledger[k]; }
   else if (a === 'fencecraft') fst(k).crafted = t.checked;
   else if (a === 'fencehave') { const st = fst(k); if (t.checked) st.have[t.dataset.i] = true; else delete st.have[t.dataset.i]; }
   else if (a === 'leghunt') { S.leg[k] = S.leg[k] || {}; S.leg[k].hunted = t.checked; }
