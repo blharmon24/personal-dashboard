@@ -67,22 +67,24 @@
   <header>
     <h1>🤠 RDR2 Tracker</h1>
     <span class="spacer"></span>
-    <span style="color:var(--muted);font-size:.75rem">v2026.11.24.3</span>
+    <span style="color:var(--muted);font-size:.75rem">v2026.11.25.1</span>
     <button id="theme-toggle" title="Toggle light/dark mode">🌙</button>
   </header>
-  <p class="subtitle">Perfect pelts, Pearson's satchels, Trapper crafting &amp; legendary animals. Saved in this browser.</p>
+  <p class="subtitle">Perfect pelts, Pearson's satchels, Trapper crafting, legendary animals &amp; Fence trinkets. Saved in this browser.</p>
 
   <div class="tabs" id="tabs">
     <div class="tab active" data-tab="pelts">🦌 Pelts</div>
     <div class="tab" data-tab="satchels">🎒 Pearson Satchels</div>
     <div class="tab" data-tab="trapper">🧥 Trapper</div>
     <div class="tab" data-tab="legend">⭐ Legendary</div>
+    <div class="tab" data-tab="fence">🪙 Fence</div>
   </div>
 
   <div class="panel active" id="p-pelts"></div>
   <div class="panel" id="p-satchels"></div>
   <div class="panel" id="p-trapper"></div>
   <div class="panel" id="p-legend"></div>
+  <div class="panel" id="p-fence"></div>
 
   <div class="foot">
     <button id="export">Export backup</button>
@@ -177,6 +179,29 @@ const TRAPPER = {
   ['Rattlesnake Vaquero Saddle',0,'Perfect Snake Skin x10'],['Panther Trail Saddle',0,'Perfect Panther Pelt']]
 };
 
+// Fence: trinkets & talismans are crafted at a Fence. [name, type, cost, ingredients, effect, note]
+const FENCE_ITEMS = [
+ ['Beaver Tooth Trinket','Trinket',18.25,'Legendary Beaver Tooth','Slows weapon degradation 10%',''],
+ ['Buck Antler Trinket','Trinket',22,'Legendary Buck Antler','Higher-quality parts when skinning',''],
+ ['Cougar Fang Trinket','Trinket',20.5,'Legendary Cougar Fang','Stamina XP gains +10%',''],
+ ['Coyote Fang Trinket','Trinket',21.25,'Legendary Coyote Fang','Dead Eye XP gains +10%',''],
+ ['Elk Antler Trinket','Trinket',22.75,'Legendary Elk Antler','Looted money +10%',''],
+ ['Fox Claw Trinket','Trinket',23.5,'Legendary Fox Claw','Eagle Eye duration +5 sec',''],
+ ["Lion's Paw Trinket",'Trinket',19.75,"Lion's Paw",'Stamina XP gains +10%','Quest-only part: "He\'s British, of Course" stranger mission'],
+ ['Moose Antler Trinket','Trinket',19,'Legendary Moose Antler','Health XP gains +10%',''],
+ ["Panther's Eye Trinket",'Trinket',25,'Legendary Panther Eye','Dead Eye drain slower 10% for 3 sec',''],
+ ['Pronghorn Horn Trinket','Trinket',24.5,'Legendary Pronghorn Horn',"Stored animals on horse don't spoil",''],
+ ['Ram Horn Trinket','Trinket',17.5,'Legendary Ram Horn','Doubles oregano/thyme/mint picked',''],
+ ['Wolf Heart Trinket','Trinket',16,'Legendary Wolf Heart','Doubles alcohol resistance',''],
+ ['Tatanka Bison Trinket','Trinket',16.75,'Legendary Tatanka Bison Horn','Melee damage received -10%',''],
+ ['Alligator Tooth Talisman','Talisman',40,'Vintage Civil War Handcuffs, Gold Jointed Bracelet, Legendary Alligator Tooth','Dead Eye Core drain -10%','Handcuffs: reward for first complete cigarette card collection'],
+ ['Bear Claw Talisman','Talisman',34.75,'Silver Chain Bracelet, Quartz Chunk, Legendary Bear Claw','Health Core drain -10%','Quartz: reward for first dinosaur bone coordinates'],
+ ['Boar Tusk Talisman','Talisman',31,'Gold Earring, Cobalt Petrified Wood, Legendary Boar Tusk','Horse health/stamina Core drain slower','Cobalt Petrified Wood: cart NW of Lake Isabella'],
+ ['Bison Horn Talisman','Talisman',38.5,'Abalone Shell Fragment, Silver Earring, Legendary Bison Horn','Stamina Core drain -10%','Abalone: house in north Rhodes'],
+ ['Raven Claw Talisman','Talisman',29,'Old Brass Compass','Slows weapon degradation 10%','Compass: reward for delivering all 10 rock carvings'],
+ ['Eagle Talon Talisman','Talisman',0,'Special/Ultimate Edition item','Eagle Eye duration +5 sec','Requires Special or Ultimate Edition; no craft data']
+];
+
 /* ---------- PARSING ---------- */
 const stripType = s => s.replace(/ (Pelt|Hide|Skin)$/, '');
 function parseIng(str) {
@@ -206,7 +231,7 @@ const KEY = 'rdr2-tracker';
 let S;
 function load() {
   try { S = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { S = {}; }
-  S.hand = S.hand || {}; S.sat = S.sat || {}; S.trap = S.trap || {}; S.leg = S.leg || {};
+  S.hand = S.hand || {}; S.sat = S.sat || {}; S.trap = S.trap || {}; S.leg = S.leg || {}; S.fence = S.fence || {}; S.loot = S.loot || [];
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 const satState = n => (S.sat[n] = S.sat[n] || { crafted:false, prereq:false, ing:{} });
@@ -327,12 +352,55 @@ function renderLegend() {
   document.getElementById('p-legend').innerHTML = h + '</div>';
 }
 
-function renderAll() { renderPelts(); renderSatchels(); renderTrapper(); renderLegend(); }
+let fenceShow = 'all';
+const fst = n => (S.fence[n] = S.fence[n] || { crafted:false, have:{} });
+function renderFence() {
+  const done = FENCE_ITEMS.filter(f => fst(f[0]).crafted).length;
+  const lootTotal = S.loot.reduce((a, l) => a + l.qty * l.value, 0);
+  let h = `<div class="stats"><div class="stat"><b>${done} / ${FENCE_ITEMS.length}</b>Trinkets &amp; talismans crafted</div>
+    <div class="stat"><b>$${lootTotal.toFixed(2)}</b>Loot to sell at Fence</div></div>
+    <div class="toolbar"><select id="fence-show">${[['all','All'],['todo','Not crafted'],['done','Crafted']].map(([v, l]) => `<option value="${v}" ${v === fenceShow ? 'selected' : ''}>${l}</option>`).join('')}</select></div><div class="grid2">`;
+  FENCE_ITEMS.forEach(([name, type, cost, ing, eff, note]) => {
+    const st = fst(name);
+    if (fenceShow === 'todo' && st.crafted) return;
+    if (fenceShow === 'done' && !st.crafted) return;
+    const parts = ing.split(', ');
+    const all = parts.every((p, i) => st.have[i]);
+    h += `<div class="card ${st.crafted ? 'done' : all ? 'ready' : ''}" style="margin:0"><div class="card-head"><h3>${esc(name)}</h3><span class="tag">${type}</span>
+      ${all && !st.crafted ? '<span class="tag warn">Ready to craft</span>' : ''}<span style="flex:1"></span>
+      <label class="chk"><input type="checkbox" data-act="fencecraft" data-k="${esc(name)}" ${st.crafted ? 'checked' : ''}> Crafted</label></div>
+      <div class="note" style="margin:0 0 4px">${esc(eff)}</div><div class="ing">`;
+    parts.forEach((p, i) => {
+      h += `<label class="chip ${st.have[i] ? 'have' : ''}"><input type="checkbox" data-act="fencehave" data-k="${esc(name)}" data-i="${i}" ${st.have[i] ? 'checked' : ''}> ${esc(p)}</label>`;
+    });
+    h += `</div><div class="note">${cost ? '$' + cost.toFixed(2) + ' at Fence' : 'Cost unknown'}${note ? ' · ' + esc(note) : ''}</div></div>`;
+  });
+  h += `</div><h3 style="margin:22px 0 8px;font-size:1rem">Fence loot to sell</h3>
+    <p class="note" style="margin:0 0 8px">Log jewelry, watches, gold bars, etc. you're carrying. Prices vary, so enter what the Fence offers.</p>
+    <div class="toolbar"><input type="search" id="loot-name" placeholder="Item (e.g. Gold Watch)"><input type="search" id="loot-qty" placeholder="Qty" value="1" style="max-width:70px;flex:none"><input type="search" id="loot-val" placeholder="$ each" style="max-width:90px;flex:none"><button id="loot-add">Add</button></div>`;
+  if (S.loot.length) {
+    h += '<table><thead><tr><th>Item</th><th>Qty</th><th>$ each</th><th>Total</th><th></th></tr></thead><tbody>';
+    S.loot.forEach((l, i) => h += `<tr><td>${esc(l.name)}</td><td>${l.qty}</td><td>$${l.value.toFixed(2)}</td><td>$${(l.qty * l.value).toFixed(2)}</td><td><button data-act="lootdel" data-i="${i}">✕</button></td></tr>`);
+    h += `</tbody></table><div style="margin-top:8px"><button id="loot-sold">Mark all sold (clear)</button></div>`;
+  }
+  document.getElementById('p-fence').innerHTML = h;
+  document.getElementById('fence-show').addEventListener('change', e => { fenceShow = e.target.value; renderFence(); });
+  document.getElementById('loot-add').onclick = () => {
+    const name = document.getElementById('loot-name').value.trim(), qty = parseInt(document.getElementById('loot-qty').value) || 1, value = parseFloat(document.getElementById('loot-val').value) || 0;
+    if (!name) return;
+    S.loot.push({ name, qty, value }); save(); renderFence();
+  };
+  const sold = document.getElementById('loot-sold');
+  if (sold) sold.onclick = () => { S.loot = []; save(); renderFence(); };
+}
+
+function renderAll() { renderPelts(); renderSatchels(); renderTrapper(); renderLegend(); renderFence(); }
 
 /* ---------- EVENTS ---------- */
 document.addEventListener('click', e => {
   const b = e.target.closest('button[data-act]');
   if (!b) return;
+  if (b.dataset.act === 'lootdel') { S.loot.splice(+b.dataset.i, 1); save(); renderFence(); return; }
   const k = b.dataset.k.replace(/^hand:/, '');
   const v = S.hand[k] || 0;
   S.hand[k] = Math.max(0, v + (b.dataset.act === 'inc' ? 1 : -1));
@@ -373,6 +441,8 @@ document.addEventListener('change', e => {
       delete S.trap[k];
     }
   }
+  else if (a === 'fencecraft') fst(k).crafted = t.checked;
+  else if (a === 'fencehave') { const st = fst(k); if (t.checked) st.have[t.dataset.i] = true; else delete st.have[t.dataset.i]; }
   else if (a === 'leghunt') { S.leg[k] = S.leg[k] || {}; S.leg[k].hunted = t.checked; }
   else if (a === 'leghand') { S.leg[k] = S.leg[k] || {}; S.leg[k].hand = t.checked; if (t.checked) S.leg[k].hunted = true; }
   else return;
