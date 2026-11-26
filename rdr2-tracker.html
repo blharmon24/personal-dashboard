@@ -67,7 +67,7 @@
   <header>
     <h1>🤠 RDR2 Tracker</h1>
     <span class="spacer"></span>
-    <span style="color:var(--muted);font-size:.75rem">v2026.11.25.2</span>
+    <span style="color:var(--muted);font-size:.75rem">v2026.11.25.3</span>
     <button id="theme-toggle" title="Toggle light/dark mode">🌙</button>
   </header>
   <p class="subtitle">Perfect pelts, Pearson's satchels, Trapper crafting, legendary animals, Fence trinkets &amp; camp crafting. Saved in this browser.</p>
@@ -290,7 +290,7 @@ for (const cat in TRAPPER) TRAPPER[cat].forEach(([name, price, ing]) =>
   RECIPES.push({ id:cat + ':' + name, cat, name, price, ing:parseIng(ing) }));
 const SAT = SATCHELS.map(([name, prereq, ing]) => {
   const list = parseIng(ing.replace(' (perfect carcass)', ''));
-  list.forEach(i => i.kind = 'perfect');
+  list.forEach(i => { i.kind = 'perfect'; i.animal = stripType(i.name); });
   return { name, prereq, ing:[{ kind:'perfect', animal:'Deer', qty:1, name:'Perfect Deer Pelt' }, ...list] };
 });
 const ANIMALS = [...new Set([
